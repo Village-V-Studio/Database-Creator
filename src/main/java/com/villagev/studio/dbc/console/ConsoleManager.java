@@ -12,6 +12,9 @@ import com.villagev.studio.dbc.config.DatabaseConfig;
 import com.villagev.studio.dbc.core.BackupManager;
 import com.villagev.studio.dbc.core.DatabaseManager;
 
+import org.jline.reader.Completer;
+import org.jline.reader.Candidate;
+
 import java.time.Instant;
 import java.util.Map;
 
@@ -34,6 +37,7 @@ public class ConsoleManager {
             Terminal terminal = TerminalBuilder.builder().system(true).build();
             LineReader lineReader = LineReaderBuilder.builder()
                     .terminal(terminal)
+                    .completer(createCompleter())
                     .build();
 
             System.out.println("Type 'db help' for a list of commands.");
@@ -44,6 +48,10 @@ public class ConsoleManager {
                     line = lineReader.readLine("> ").trim();
                 } catch (UserInterruptException e) {
                     continue;
+                } catch (org.jline.reader.EndOfFileException e) {
+                    System.out.println("\nShutting down Database Creator safely...");
+                    dbManager.stopAll();
+                    break;
                 }
 
                 if (line.isEmpty())
@@ -163,5 +171,38 @@ public class ConsoleManager {
         }
         System.out.println("Multiple databases found. Please specify the name.");
         return null;
+    }
+
+    private Completer createCompleter() {
+        return (reader, line, candidates) -> {
+            int index = line.wordIndex();
+            String word = line.word();
+
+            if (index == 0) {
+                if ("db".startsWith(word.toLowerCase()))
+                    candidates.add(new Candidate("db"));
+                if ("help".startsWith(word.toLowerCase()))
+                    candidates.add(new Candidate("help"));
+                if ("?".startsWith(word))
+                    candidates.add(new Candidate("?"));
+                if ("exit".startsWith(word.toLowerCase()))
+                    candidates.add(new Candidate("exit"));
+            } else if (index == 1 && line.words().get(0).equalsIgnoreCase("db")) {
+                String[] actions = { "enable", "disable", "reload", "backup", "stop", "help" };
+                for (String action : actions) {
+                    if (action.startsWith(word.toLowerCase()))
+                        candidates.add(new Candidate(action));
+                }
+            } else if (index == 2 && line.words().get(0).equalsIgnoreCase("db")) {
+                String action = line.words().get(1).toLowerCase();
+                if (action.equals("enable") || action.equals("disable") || action.equals("reload")) {
+                    for (String dbName : configManager.getConfig().getDatabases().keySet()) {
+                        if (dbName.toLowerCase().startsWith(word.toLowerCase())) {
+                            candidates.add(new Candidate(dbName));
+                        }
+                    }
+                }
+            }
+        };
     }
 }

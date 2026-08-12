@@ -36,7 +36,7 @@ public class BackupManager {
         dbManager.stopDatabase(name);
 
         try {
-            File sourceFolder = new File("databases/" + name);
+            File sourceFolder = new File("databases", name);
             if (!sourceFolder.exists()) {
                 System.out.println("No data found for " + name + ", skipping backup.");
                 return;

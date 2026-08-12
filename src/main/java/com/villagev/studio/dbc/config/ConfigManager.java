@@ -30,14 +30,13 @@ public class ConfigManager {
     }
 
     private void createDefaultConfig(File configFile) {
-        String defaultToml = 
-                "drive-token = \"\"\n" +
+        String defaultToml = "drive-token = \"\"\n" +
                 "client-id = \"\"\n" +
                 "client-secret = \"\"\n" +
                 "password = \"\"\n" +
                 "drive-folder = \"DBC_Backups/\"\n" +
                 "time-zone = \"UTC\"\n" +
-                "log-level = \"warn\"\n\n" +
+                "log-level = \"info\"\n\n" +
                 "[database.example]\n" +
                 "ip = \"127.0.0.1\"\n" +
                 "port = 3000\n" +
