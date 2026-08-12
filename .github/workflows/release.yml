@@ -1,0 +1,70 @@
+name: Release DBC
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Extract Version from POM
+        id: pom-version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Determine Tag Name
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            echo "tag_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag_name=v${{ steps.pom-version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get Previous Tag
+        id: previoustag
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ steps.tag.outputs.tag_name }}^" 2>/dev/null || echo "")
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "**DBC Release ${{ steps.tag.outputs.tag_name }}**" >> $GITHUB_OUTPUT
+          if [ ! -z "${{ steps.previoustag.outputs.prev_tag }}" ]; then
+            echo "" >> $GITHUB_OUTPUT
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.previoustag.outputs.prev_tag }}...${{ steps.tag.outputs.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: Release ${{ steps.tag.outputs.tag_name }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          files: target/DBC.jar
+          generate_release_notes: true
