@@ -1,4 +1,4 @@
-# DBC - Database Manager
+# DBC - Database Creator
 
 **DBC** (Database Creator) is a powerful yet incredibly easy-to-use MySQL (MariaDB) database manager designed specifically for developers, system administrators, and microservice networks.
 
