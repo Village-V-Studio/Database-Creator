@@ -1,11 +1,11 @@
 package com.villagev.studio.dbc.core;
 
-import ch.vorburger.mariadb4j.DB;
-import ch.vorburger.mariadb4j.DBConfigurationBuilder;
-
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+
+import ch.vorburger.mariadb4j.DB;
+import ch.vorburger.mariadb4j.DBConfigurationBuilder;
 
 import com.villagev.studio.dbc.config.DatabaseConfig;
 

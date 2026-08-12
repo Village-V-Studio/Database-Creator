@@ -1,5 +1,10 @@
 package com.villagev.studio.dbc.console;
 
+import java.time.Instant;
+import java.util.Map;
+
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
@@ -11,12 +16,6 @@ import com.villagev.studio.dbc.config.ConfigManager;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 import com.villagev.studio.dbc.core.BackupManager;
 import com.villagev.studio.dbc.core.DatabaseManager;
-
-import org.jline.reader.Completer;
-import org.jline.reader.Candidate;
-
-import java.time.Instant;
-import java.util.Map;
 
 public class ConsoleManager {
     private final ConfigManager configManager;

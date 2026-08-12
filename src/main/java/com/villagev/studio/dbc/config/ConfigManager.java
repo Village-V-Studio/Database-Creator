@@ -1,9 +1,9 @@
 package com.villagev.studio.dbc.config;
 
+import java.io.File;
+
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.toml.TomlMapper;
-
-import java.io.File;
 
 public class ConfigManager {
     private static final String CONFIG_FILE_NAME = "config.toml";
