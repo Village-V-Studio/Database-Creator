@@ -11,6 +11,7 @@ import com.villagev.studio.dbc.config.DatabaseConfig;
 
 public class DatabaseManager {
     private final Map<String, DB> activeDatabases = new HashMap<>();
+    private final Map<String, DatabaseConfig> activeConfigs = new HashMap<>();
     private final File databasesDir = new File("databases");
     private final File binariesDir = new File("mariaDB_binaries");
 
@@ -36,6 +37,7 @@ public class DatabaseManager {
             configBuilder.setDataDir(dataDir);
 
             configBuilder.setBaseDir(binariesDir);
+            configBuilder.setSecurityDisabled(false);
 
             DB db = DB.newEmbeddedDB(configBuilder.build());
             db.start();
@@ -44,11 +46,17 @@ public class DatabaseManager {
                 String sql = "CREATE USER IF NOT EXISTS '" + config.getUsername() + "'@'%' IDENTIFIED BY '"
                         + config.getPassword() + "'; " +
                         "GRANT ALL PRIVILEGES ON *.* TO '" + config.getUsername() + "'@'%'; " +
+                        "CREATE USER IF NOT EXISTS '" + config.getUsername() + "'@'localhost' IDENTIFIED BY '"
+                        + config.getPassword() + "'; " +
+                        "GRANT ALL PRIVILEGES ON *.* TO '" + config.getUsername() + "'@'localhost'; " +
+                        "ALTER USER IF EXISTS '" + config.getUsername() + "'@'localhost' IDENTIFIED BY '"
+                        + config.getPassword() + "'; " +
                         "FLUSH PRIVILEGES;";
                 db.run(sql, "root", null, null);
             }
 
             activeDatabases.put(name, db);
+            activeConfigs.put(name, config);
             System.out.println("Database " + name + " successfully started!");
 
         } catch (Exception e) {
@@ -59,9 +67,23 @@ public class DatabaseManager {
 
     public void stopDatabase(String name) {
         DB db = activeDatabases.remove(name);
+        DatabaseConfig config = activeConfigs.remove(name);
+
         if (db != null) {
             try {
                 System.out.println("Stopping database: " + name + "...");
+
+                // Graceful shutdown
+                try {
+                    String user = config != null ? config.getUsername() : "root";
+                    String pass = config != null ? config.getPassword() : null;
+                    db.run("SHUTDOWN;", user, pass, null);
+                    // Wait a moment for graceful exit
+                    Thread.sleep(1000);
+                } catch (Exception ignore) {
+                    // Fallback to hard stop if graceful shutdown fails
+                }
+
                 db.stop();
                 System.out.println("Database " + name + " stopped.");
             } catch (Exception e) {

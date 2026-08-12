@@ -30,26 +30,25 @@ public class ConfigManager {
     }
 
     private void createDefaultConfig(File configFile) {
-        AppConfig defaultConfig = new AppConfig();
-        defaultConfig.setDriveToken("");
-        defaultConfig.setClientId("");
-        defaultConfig.setClientSecret("");
-        defaultConfig.setDriveFolder("DBC_Backups/");
-        defaultConfig.setPassword("");
-
-        DatabaseConfig exampleDb = new DatabaseConfig();
-        exampleDb.setIp("127.0.0.1");
-        exampleDb.setPort(3000);
-        exampleDb.setUsername("root");
-        exampleDb.setPassword("password");
-        exampleDb.setAutoStart(false);
-        exampleDb.setAutoBackup(false);
-        exampleDb.setBackupInterval(24);
-
-        defaultConfig.getDatabases().put("example", exampleDb);
+        String defaultToml = 
+                "drive-token = \"\"\n" +
+                "client-id = \"\"\n" +
+                "client-secret = \"\"\n" +
+                "password = \"\"\n" +
+                "drive-folder = \"DBC_Backups/\"\n" +
+                "time-zone = \"UTC\"\n" +
+                "log-level = \"warn\"\n\n" +
+                "[database.example]\n" +
+                "ip = \"127.0.0.1\"\n" +
+                "port = 3000\n" +
+                "username = \"root\"\n" +
+                "password = \"password\"\n" +
+                "auto-start = false\n" +
+                "auto-backup = false\n" +
+                "backup-interval = 24\n";
 
         try {
-            tomlMapper.writeValue(configFile, defaultConfig);
+            java.nio.file.Files.writeString(configFile.toPath(), defaultToml, java.nio.charset.StandardCharsets.UTF_8);
             System.out.println("Generated default configuration file: " + CONFIG_FILE_NAME);
         } catch (Exception e) {
             System.err.println("Failed to generate default configuration: " + e.getMessage());

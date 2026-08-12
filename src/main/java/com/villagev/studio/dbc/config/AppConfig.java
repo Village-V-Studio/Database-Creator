@@ -11,6 +11,12 @@ public class AppConfig {
     @JsonProperty("drive-folder")
     private String driveFolder = "DBC_Backups/";
 
+    @JsonProperty("time-zone")
+    private String timeZone = "UTC";
+
+    @JsonProperty("log-level")
+    private String logLevel = "info";
+
     private String password = "";
     @JsonProperty("database")
     private java.util.Map<String, DatabaseConfig> databases = new java.util.HashMap<>();
@@ -61,5 +67,21 @@ public class AppConfig {
 
     public void setDatabases(java.util.Map<String, DatabaseConfig> databases) {
         this.databases = databases;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
+    }
+
+    public String getLogLevel() {
+        return logLevel;
+    }
+
+    public void setLogLevel(String logLevel) {
+        this.logLevel = logLevel;
     }
 }

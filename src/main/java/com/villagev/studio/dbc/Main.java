@@ -4,15 +4,18 @@ import java.util.TimeZone;
 
 public class Main {
     public static void main(String[] args) {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        com.villagev.studio.dbc.config.ConfigManager configManager = new com.villagev.studio.dbc.config.ConfigManager();
+        configManager.loadConfig();
+        com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();
+
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", config.getLogLevel().toLowerCase());
+        TimeZone.setDefault(TimeZone.getTimeZone(config.getTimeZone()));
 
         System.out.println("Starting Database Creator...");
         System.out.println("Current timezone set to: " + TimeZone.getDefault().getID());
+        System.out.println("Log level set to: " + config.getLogLevel().toUpperCase());
 
         checkRclone();
-
-        com.villagev.studio.dbc.config.ConfigManager configManager = new com.villagev.studio.dbc.config.ConfigManager();
-        configManager.loadConfig();
 
         com.villagev.studio.dbc.core.DatabaseManager dbManager = new com.villagev.studio.dbc.core.DatabaseManager();
         com.villagev.studio.dbc.core.BackupManager backupManager = new com.villagev.studio.dbc.core.BackupManager(
@@ -20,7 +23,6 @@ public class Main {
         com.villagev.studio.dbc.core.Scheduler scheduler = new com.villagev.studio.dbc.core.Scheduler(configManager,
                 backupManager);
 
-        com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();
         for (java.util.Map.Entry<String, com.villagev.studio.dbc.config.DatabaseConfig> entry : config.getDatabases()
                 .entrySet()) {
             if (entry.getValue().isAutoStart()) {

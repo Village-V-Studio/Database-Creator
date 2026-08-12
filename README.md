@@ -20,6 +20,8 @@ client-id = "id"
 client-secret = "secret"
 password = "super_secure_password" # Using AES-256 encryption for ZIP archives (never lose it!)
 drive-folder = "DBC_Backups/"
+time-zone = "UTC" # App and database timezone
+log-level = "info" # Console log verbosity (debug, info, warn, error)
 
 [database.example]
 ip = "127.0.0.1"
