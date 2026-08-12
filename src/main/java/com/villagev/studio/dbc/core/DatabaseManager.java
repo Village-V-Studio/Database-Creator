@@ -1,0 +1,91 @@
+package com.villagev.studio.dbc.core;
+
+import ch.vorburger.mariadb4j.DB;
+import ch.vorburger.mariadb4j.DBConfigurationBuilder;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.villagev.studio.dbc.config.DatabaseConfig;
+
+public class DatabaseManager {
+    private final Map<String, DB> activeDatabases = new HashMap<>();
+    private final File databasesDir = new File("databases");
+    private final File binariesDir = new File("mariaDB_binaries");
+
+    public DatabaseManager() {
+        if (!databasesDir.exists()) {
+            databasesDir.mkdirs();
+        }
+    }
+
+    public void startDatabase(String name, DatabaseConfig config) {
+        if (activeDatabases.containsKey(name)) {
+            System.out.println("Database " + name + " is already running.");
+            return;
+        }
+
+        try {
+            System.out.println("Starting database: " + name + " on port " + config.getPort() + "...");
+
+            DBConfigurationBuilder configBuilder = DBConfigurationBuilder.newBuilder();
+            configBuilder.setPort(config.getPort());
+
+            File dataDir = new File(databasesDir, name);
+            configBuilder.setDataDir(dataDir);
+
+            configBuilder.setBaseDir(binariesDir);
+
+            DB db = DB.newEmbeddedDB(configBuilder.build());
+            db.start();
+
+            if (!config.getUsername().equals("root") || !config.getPassword().isEmpty()) {
+                String sql = "CREATE USER IF NOT EXISTS '" + config.getUsername() + "'@'%' IDENTIFIED BY '"
+                        + config.getPassword() + "'; " +
+                        "GRANT ALL PRIVILEGES ON *.* TO '" + config.getUsername() + "'@'%'; " +
+                        "FLUSH PRIVILEGES;";
+                db.run(sql, "root", null, null);
+            }
+
+            activeDatabases.put(name, db);
+            System.out.println("Database " + name + " successfully started!");
+
+        } catch (Exception e) {
+            System.err.println("Failed to start database " + name + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void stopDatabase(String name) {
+        DB db = activeDatabases.remove(name);
+        if (db != null) {
+            try {
+                System.out.println("Stopping database: " + name + "...");
+                db.stop();
+                System.out.println("Database " + name + " stopped.");
+            } catch (Exception e) {
+                System.err.println("Failed to stop database " + name + ": " + e.getMessage());
+            }
+        }
+    }
+
+    public void stopAll() {
+        for (String name : new HashMap<>(activeDatabases).keySet()) {
+            stopDatabase(name);
+        }
+    }
+
+    public void deleteDatabase(String name) {
+        stopDatabase(name);
+        File dataDir = new File(databasesDir, name);
+        if (dataDir.exists()) {
+            File oldDir = new File(databasesDir, name + ".old");
+            if (dataDir.renameTo(oldDir)) {
+                System.out.println("Database " + name + " has been renamed to .old");
+            } else {
+                System.err.println("Failed to rename database " + name + " to .old");
+            }
+        }
+    }
+}
