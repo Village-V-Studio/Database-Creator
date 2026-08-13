@@ -25,8 +25,8 @@ public class BackupManager {
         }
     }
 
-    public void runBackup(String name, DatabaseConfig dbConfig, AppConfig appConfig) {
-        if (!dbConfig.isAutoBackup()) {
+    public void runBackup(String name, DatabaseConfig dbConfig, AppConfig appConfig, boolean force) {
+        if (!force && !dbConfig.isAutoBackup()) {
             System.out.println("Skipping backup for " + name + " (auto-backup is disabled).");
             return;
         }
@@ -65,10 +65,10 @@ public class BackupManager {
         }
     }
 
-    public void backupAllActive(AppConfig appConfig) {
+    public void backupAllActive(AppConfig appConfig, boolean force) {
         System.out.println("Running global backup process...");
         for (Map.Entry<String, DatabaseConfig> entry : appConfig.getDatabases().entrySet()) {
-            runBackup(entry.getKey(), entry.getValue(), appConfig);
+            runBackup(entry.getKey(), entry.getValue(), appConfig, force);
         }
     }
 

@@ -48,12 +48,12 @@ public class Scheduler {
 
             LocalDateTime lastBackup = lastBackupTimes.get(dbName);
             if (lastBackup == null) {
-                backupManager.runBackup(dbName, dbConfig, config);
+                backupManager.runBackup(dbName, dbConfig, config, false);
                 lastBackupTimes.put(dbName, LocalDateTime.now());
             } else {
                 long hoursSinceLastBackup = ChronoUnit.HOURS.between(lastBackup, now);
                 if (hoursSinceLastBackup >= dbConfig.getBackupInterval()) {
-                    backupManager.runBackup(dbName, dbConfig, config);
+                    backupManager.runBackup(dbName, dbConfig, config, false);
                     lastBackupTimes.put(dbName, LocalDateTime.now());
                 }
             }

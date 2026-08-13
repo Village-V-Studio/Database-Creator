@@ -46,10 +46,10 @@ backup-interval = 24 # in hours
 
 ## 🚀 Commands
 Use these commands to control your databases via the built-in interactive console:
-- `db enable <name>` — Enable a database.
-- `db disable <name>` — Disable a database.
-- `db reload` — Reload the config file. Deleted databases will be automatically stopped and renamed to `.old`.
-- `db backup` — Trigger a manual backup of all active databases.
+- `db enable [name1,name2]` — Start one or multiple databases (separated by commas).
+- `db disable [name1,name2]` — Stop one or multiple databases.
+- `db reload [name1,name2]` — Reload the config file. If no names are provided, applies to all databases. Deleted databases will be automatically stopped and renamed to `.old`.
+- `db backup [name1,name2]` — Run a manual forced backup for specific databases (bypasses auto-backup setting).
 - `db stop` — Safely stop all databases and the program.
 
 ## 🛠 Compilation and Start

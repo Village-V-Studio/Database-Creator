@@ -15,7 +15,7 @@ public class Main {
         System.out.println("Current timezone set to: " + TimeZone.getDefault().getID());
         System.out.println("Log level set to: " + config.getLogLevel().toUpperCase());
 
-        checkRclone();
+        checkRclone(config);
 
         com.villagev.studio.dbc.core.DatabaseManager dbManager = new com.villagev.studio.dbc.core.DatabaseManager();
         com.villagev.studio.dbc.core.BackupManager backupManager = new com.villagev.studio.dbc.core.BackupManager(
@@ -40,7 +40,12 @@ public class Main {
         System.out.println("Goodbye!");
     }
 
-    private static void checkRclone() {
+    private static void checkRclone(com.villagev.studio.dbc.config.AppConfig config) {
+        String backupType = config.getBackupType();
+        if (!"google-drive".equalsIgnoreCase(backupType) && !"gdrive".equalsIgnoreCase(backupType)) {
+            return; // Only check for rclone if the user actually wants to use Google Drive backups
+        }
+
         try {
             Process process = new ProcessBuilder("rclone", "version").start();
             process.waitFor();

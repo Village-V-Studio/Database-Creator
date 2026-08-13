@@ -76,14 +76,14 @@ public class ConsoleManager {
             }
 
             String action = args[1].toLowerCase();
-            String dbName = args.length > 2 ? args[2] : null;
+            String targets = args.length > 2 ? args[2] : null;
 
-            if (action.equals("backup") || action.equals("stop")) {
+            if ((action.equals("backup") || action.equals("stop")) && targets == null) {
                 if (pendingCommand != null && pendingCommand.equals(action)) {
                     if (Instant.now().minusSeconds(5).isBefore(pendingCommandTime)) {
                         pendingCommand = null;
                         if (action.equals("backup")) {
-                            backupManager.backupAllActive(config);
+                            backupManager.backupAllActive(config, true);
                             return true;
                         } else {
                             System.out.println("Shutting down Database Creator safely...");
@@ -105,15 +105,20 @@ public class ConsoleManager {
 
             switch (action) {
                 case "enable":
-                    dbName = resolveDbName(dbName, config);
-                    if (dbName != null && config.getDatabases().containsKey(dbName)) {
-                        dbManager.startDatabase(dbName, config.getDatabases().get(dbName));
+                    for (String name : resolveDbNames(targets, config)) {
+                        dbManager.startDatabase(name, config.getDatabases().get(name));
                     }
                     break;
                 case "disable":
-                    dbName = resolveDbName(dbName, config);
-                    if (dbName != null) {
-                        dbManager.stopDatabase(dbName);
+                    for (String name : resolveDbNames(targets, config)) {
+                        dbManager.stopDatabase(name);
+                    }
+                    break;
+                case "backup":
+                    if (targets != null) {
+                        for (String name : resolveDbNames(targets, config)) {
+                            backupManager.runBackup(name, config.getDatabases().get(name), config, true);
+                        }
                     }
                     break;
                 case "reload":
@@ -121,13 +126,15 @@ public class ConsoleManager {
                     configManager.loadConfig();
                     AppConfig newConfig = configManager.getConfig();
 
-                    if (dbName != null) {
-                        if (!newConfig.getDatabases().containsKey(dbName)) {
-                            System.out.println("Database " + dbName + " was removed from config. Renaming to .old");
-                            dbManager.deleteDatabase(dbName);
-                        } else {
-                            dbManager.stopDatabase(dbName);
-                            dbManager.startDatabase(dbName, newConfig.getDatabases().get(dbName));
+                    if (targets != null) {
+                        for (String name : resolveDbNames(targets, config)) {
+                            if (!newConfig.getDatabases().containsKey(name)) {
+                                System.out.println("Database " + name + " was removed from config. Renaming to .old");
+                                dbManager.deleteDatabase(name);
+                            } else {
+                                dbManager.stopDatabase(name);
+                                dbManager.startDatabase(name, newConfig.getDatabases().get(name));
+                            }
                         }
                     } else {
                         for (String oldName : config.getDatabases().keySet()) {
@@ -145,11 +152,11 @@ public class ConsoleManager {
                     break;
                 case "help":
                     System.out.println("Commands:");
-                    System.out.println("  db enable [name]  - Start a database");
-                    System.out.println("  db disable [name] - Stop a database");
-                    System.out.println("  db reload [name]  - Reload config (and restart DBs)");
-                    System.out.println("  db backup         - Run manual backup (double tap)");
-                    System.out.println("  db stop           - Safely shutdown manager (double tap)");
+                    System.out.println("  db enable [name1,name2]  - Start databases");
+                    System.out.println("  db disable [name1,name2] - Stop databases");
+                    System.out.println("  db reload [name1,name2]  - Reload config (and restart DBs)");
+                    System.out.println("  db backup [name1,name2]  - Run manual backup (double tap for all)");
+                    System.out.println("  db stop                  - Safely shutdown manager (double tap)");
                     break;
                 default:
                     System.out.println("Unknown action. Type 'db help'.");
@@ -162,14 +169,24 @@ public class ConsoleManager {
         return true;
     }
 
-    private String resolveDbName(String name, AppConfig config) {
-        if (name != null)
-            return name;
-        if (config.getDatabases().size() == 1) {
-            return config.getDatabases().keySet().iterator().next();
+    private java.util.List<String> resolveDbNames(String input, AppConfig config) {
+        if (input == null) {
+            if (config.getDatabases().size() == 1) {
+                return java.util.Collections.singletonList(config.getDatabases().keySet().iterator().next());
+            }
+            System.out.println("Please specify one or more database names separated by commas.");
+            return java.util.Collections.emptyList();
         }
-        System.out.println("Multiple databases found. Please specify the name.");
-        return null;
+        java.util.List<String> validNames = new java.util.ArrayList<>();
+        for (String name : input.split(",")) {
+            name = name.trim();
+            if (config.getDatabases().containsKey(name)) {
+                validNames.add(name);
+            } else {
+                System.out.println("Database '" + name + "' not found in config. Skipping.");
+            }
+        }
+        return validNames;
     }
 
     private Completer createCompleter() {
@@ -194,10 +211,17 @@ public class ConsoleManager {
                 }
             } else if (index == 2 && line.words().get(0).equalsIgnoreCase("db")) {
                 String action = line.words().get(1).toLowerCase();
-                if (action.equals("enable") || action.equals("disable") || action.equals("reload")) {
+                if (action.equals("enable") || action.equals("disable") || action.equals("reload") || action.equals("backup")) {
+                    String prefix = "";
+                    String currentWord = word;
+                    if (word.contains(",")) {
+                        int lastComma = word.lastIndexOf(',');
+                        prefix = word.substring(0, lastComma + 1);
+                        currentWord = word.substring(lastComma + 1);
+                    }
                     for (String dbName : configManager.getConfig().getDatabases().keySet()) {
-                        if (dbName.toLowerCase().startsWith(word.toLowerCase())) {
-                            candidates.add(new Candidate(dbName));
+                        if (dbName.toLowerCase().startsWith(currentWord.toLowerCase())) {
+                            candidates.add(new Candidate(prefix + dbName));
                         }
                     }
                 }
