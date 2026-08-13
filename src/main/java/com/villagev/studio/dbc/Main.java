@@ -32,7 +32,7 @@ public class Main {
 
         scheduler.start();
 
-        com.villagev.studio.dbc.console.ConsoleManager consoleManager = new com.villagev.studio.dbc.console.ConsoleManager(
+        com.villagev.studio.dbc.console.Manager consoleManager = new com.villagev.studio.dbc.console.Manager(
                 configManager, dbManager, backupManager);
         consoleManager.start();
 
@@ -43,7 +43,7 @@ public class Main {
     private static void checkRclone(com.villagev.studio.dbc.config.AppConfig config) {
         String backupType = config.getBackupType();
         if (!"google-drive".equalsIgnoreCase(backupType) && !"gdrive".equalsIgnoreCase(backupType)) {
-            return; // Only check for rclone if the user actually wants to use Google Drive backups
+            return;
         }
 
         try {

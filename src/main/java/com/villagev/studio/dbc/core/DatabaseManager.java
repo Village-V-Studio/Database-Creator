@@ -34,8 +34,9 @@ public class DatabaseManager {
             configBuilder.setPort(config.getPort());
 
             File dataDir = new File(databasesDir, name);
-            configBuilder.setDataDir(dataDir);
+            boolean isNewDb = !dataDir.exists() || (dataDir.isDirectory() && dataDir.list() != null && dataDir.list().length == 0);
 
+            configBuilder.setDataDir(dataDir);
             configBuilder.setBaseDir(binariesDir);
             configBuilder.setSecurityDisabled(false);
 
@@ -52,7 +53,12 @@ public class DatabaseManager {
                         "ALTER USER IF EXISTS '" + config.getUsername() + "'@'localhost' IDENTIFIED BY '"
                         + config.getPassword() + "'; " +
                         "FLUSH PRIVILEGES;";
-                db.run(sql, "root", null, null);
+                try {
+                    String connectionPassword = isNewDb ? null : config.getPassword();
+                    db.run(sql, "root", connectionPassword, null);
+                } catch (Exception e) {
+                    System.err.println("Warning: Failed to update user privileges. If you changed the password in config, you might need to update it manually in the database.");
+                }
             }
 
             activeDatabases.put(name, db);
@@ -73,15 +79,12 @@ public class DatabaseManager {
             try {
                 System.out.println("Stopping database: " + name + "...");
 
-                // Graceful shutdown
                 try {
                     String user = config != null ? config.getUsername() : "root";
                     String pass = config != null ? config.getPassword() : null;
                     db.run("SHUTDOWN;", user, pass, null);
-                    // Wait a moment for graceful exit
                     Thread.sleep(1000);
                 } catch (Exception ignore) {
-                    // Fallback to hard stop if graceful shutdown fails
                 }
 
                 db.stop();

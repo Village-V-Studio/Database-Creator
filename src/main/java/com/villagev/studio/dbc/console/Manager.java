@@ -12,20 +12,19 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 import com.villagev.studio.dbc.config.AppConfig;
-import com.villagev.studio.dbc.config.Manager;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 import com.villagev.studio.dbc.core.BackupManager;
 import com.villagev.studio.dbc.core.DatabaseManager;
 
-public class ConsoleManager {
-    private final Manager configManager;
+public class Manager {
+    private final com.villagev.studio.dbc.config.Manager configManager;
     private final DatabaseManager dbManager;
     private final BackupManager backupManager;
 
     private String pendingCommand = null;
     private Instant pendingCommandTime = null;
 
-    public ConsoleManager(Manager configManager, DatabaseManager dbManager, BackupManager backupManager) {
+    public Manager(com.villagev.studio.dbc.config.Manager configManager, DatabaseManager dbManager, BackupManager backupManager) {
         this.configManager = configManager;
         this.dbManager = dbManager;
         this.backupManager = backupManager;
@@ -211,7 +210,8 @@ public class ConsoleManager {
                 }
             } else if (index == 2 && line.words().get(0).equalsIgnoreCase("db")) {
                 String action = line.words().get(1).toLowerCase();
-                if (action.equals("enable") || action.equals("disable") || action.equals("reload") || action.equals("backup")) {
+                if (action.equals("enable") || action.equals("disable") || action.equals("reload")
+                        || action.equals("backup")) {
                     String prefix = "";
                     String currentWord = word;
                     if (word.contains(",")) {
