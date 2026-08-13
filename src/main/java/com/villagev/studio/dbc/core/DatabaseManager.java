@@ -72,6 +72,11 @@ public class DatabaseManager {
     }
 
     public void stopDatabase(String name) {
+        if (!activeDatabases.containsKey(name)) {
+            System.out.println("Database " + name + " is not running (already stopped).");
+            return;
+        }
+
         DB db = activeDatabases.remove(name);
         DatabaseConfig config = activeConfigs.remove(name);
 
@@ -98,19 +103,6 @@ public class DatabaseManager {
     public void stopAll() {
         for (String name : new HashMap<>(activeDatabases).keySet()) {
             stopDatabase(name);
-        }
-    }
-
-    public void deleteDatabase(String name) {
-        stopDatabase(name);
-        File dataDir = new File(databasesDir, name);
-        if (dataDir.exists()) {
-            File oldDir = new File(databasesDir, name + ".old");
-            if (dataDir.renameTo(oldDir)) {
-                System.out.println("Database " + name + " has been renamed to .old");
-            } else {
-                System.err.println("Failed to rename database " + name + " to .old");
-            }
         }
     }
 }

@@ -128,9 +128,10 @@ public class Manager {
                     if (targets != null) {
                         for (String name : resolveDbNames(targets, config)) {
                             if (!newConfig.getDatabases().containsKey(name)) {
-                                System.out.println("Database " + name + " was removed from config. Renaming to .old");
-                                dbManager.deleteDatabase(name);
+                                System.out.println("Database " + name + " was removed from config. Stopping it.");
+                                dbManager.stopDatabase(name);
                             } else {
+                                System.out.println("Reloading database: " + name + "...");
                                 dbManager.stopDatabase(name);
                                 dbManager.startDatabase(name, newConfig.getDatabases().get(name));
                             }
@@ -138,11 +139,13 @@ public class Manager {
                     } else {
                         for (String oldName : config.getDatabases().keySet()) {
                             if (!newConfig.getDatabases().containsKey(oldName)) {
-                                dbManager.deleteDatabase(oldName);
+                                System.out.println("Database " + oldName + " was removed from config. Stopping it.");
+                                dbManager.stopDatabase(oldName);
                             }
                         }
                         for (Map.Entry<String, DatabaseConfig> entry : newConfig.getDatabases().entrySet()) {
                             if (entry.getValue().isAutoStart()) {
+                                System.out.println("Reloading database: " + entry.getKey() + "...");
                                 dbManager.stopDatabase(entry.getKey());
                                 dbManager.startDatabase(entry.getKey(), entry.getValue());
                             }
