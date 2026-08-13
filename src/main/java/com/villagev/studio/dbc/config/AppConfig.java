@@ -1,73 +1,29 @@
 package com.villagev.studio.dbc.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AppConfig {
-    private String driveToken = "";
-    private String clientId = "";
-    @JsonProperty("client-secret")
-    private String clientSecret = "";
-
-    @JsonProperty("drive-folder")
-    private String driveFolder = "DBC_Backups/";
-
     @JsonProperty("time-zone")
     private String timeZone = "UTC";
 
     @JsonProperty("log-level")
     private String logLevel = "info";
 
+    @JsonProperty("backup-type")
+    private String backupType = "local";
+
     private String password = "";
+
+    @JsonProperty("google-drive")
+    private GoogleDrive googleDrive = new GoogleDrive();
+
+    @JsonProperty("server")
+    private ServerConfig server = new ServerConfig();
+
     @JsonProperty("database")
-    private java.util.Map<String, DatabaseConfig> databases = new java.util.HashMap<>();
-
-    public String getDriveToken() {
-        return driveToken;
-    }
-
-    public void setDriveToken(String driveToken) {
-        this.driveToken = driveToken;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-    }
-
-    public String getDriveFolder() {
-        return driveFolder;
-    }
-
-    public void setDriveFolder(String driveFolder) {
-        this.driveFolder = driveFolder;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public java.util.Map<String, DatabaseConfig> getDatabases() {
-        return databases;
-    }
-
-    public void setDatabases(java.util.Map<String, DatabaseConfig> databases) {
-        this.databases = databases;
-    }
+    private Map<String, DatabaseConfig> databases = new HashMap<>();
 
     public String getTimeZone() {
         return timeZone;
@@ -83,5 +39,45 @@ public class AppConfig {
 
     public void setLogLevel(String logLevel) {
         this.logLevel = logLevel;
+    }
+
+    public String getBackupType() {
+        return backupType;
+    }
+
+    public void setBackupType(String backupType) {
+        this.backupType = backupType;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public GoogleDrive getGoogleDrive() {
+        return googleDrive;
+    }
+
+    public void setGoogleDrive(GoogleDrive googleDrive) {
+        this.googleDrive = googleDrive;
+    }
+
+    public ServerConfig getServer() {
+        return server;
+    }
+
+    public void setServer(ServerConfig server) {
+        this.server = server;
+    }
+
+    public Map<String, DatabaseConfig> getDatabases() {
+        return databases;
+    }
+
+    public void setDatabases(Map<String, DatabaseConfig> databases) {
+        this.databases = databases;
     }
 }

@@ -16,13 +16,23 @@ Setting up isolated databases for multiple applications or microservices typical
 ## ⚙️ Config Example (`config.toml`)
 
 ```toml
+time-zone = "UTC" # App and database timezone
+log-level = "info" # Console log verbosity (debug, info, warn, error)
+backup-type = "local" # Choose: local, google-drive, or server
+password = "super_secure_password" # Using AES-256 encryption for ZIP archives (never lose it!)
+
+[google-drive]
 drive-token = "token"
 client-id = "id"
 client-secret = "secret"
-password = "super_secure_password" # Using AES-256 encryption for ZIP archives (never lose it!)
 drive-folder = "DBC_Backups/"
-time-zone = "UTC" # App and database timezone
-log-level = "info" # Console log verbosity (debug, info, warn, error)
+
+[server]
+ip = "192.168.1.10"
+port = 22
+username = "admin"
+password = "server_password"
+remote-folder = "/backups"
 
 [database.example]
 ip = "127.0.0.1"

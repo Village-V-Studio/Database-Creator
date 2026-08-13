@@ -9,16 +9,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.villagev.studio.dbc.config.AppConfig;
-import com.villagev.studio.dbc.config.ConfigManager;
+import com.villagev.studio.dbc.config.Manager;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 
 public class Scheduler {
-    private final ConfigManager configManager;
+    private final Manager configManager;
     private final BackupManager backupManager;
     private final ScheduledExecutorService executorService;
     private final Map<String, LocalDateTime> lastBackupTimes = new HashMap<>();
 
-    public Scheduler(ConfigManager configManager, BackupManager backupManager) {
+    public Scheduler(Manager configManager, BackupManager backupManager) {
         this.configManager = configManager;
         this.backupManager = backupManager;
         this.executorService = Executors.newSingleThreadScheduledExecutor();

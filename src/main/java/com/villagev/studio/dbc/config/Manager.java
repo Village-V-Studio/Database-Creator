@@ -5,12 +5,12 @@ import java.io.File;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.toml.TomlMapper;
 
-public class ConfigManager {
+public class Manager {
     private static final String CONFIG_FILE_NAME = "config.toml";
     private final ObjectMapper tomlMapper;
     private AppConfig currentConfig;
 
-    public ConfigManager() {
+    public Manager() {
         this.tomlMapper = new TomlMapper();
     }
 
@@ -30,13 +30,21 @@ public class ConfigManager {
     }
 
     private void createDefaultConfig(File configFile) {
-        String defaultToml = "drive-token = \"\"\n" +
+        String defaultToml = "time-zone = \"UTC\"\n" +
+                "log-level = \"info\"\n" +
+                "backup-type = \"local\"\n" +
+                "password = \"\"\n\n" +
+                "[server]\n" +
+                "ip = \"\"\n" +
+                "port = 22\n" +
+                "username = \"\"\n" +
+                "password = \"\"\n" +
+                "remote-folder = \"/backups\"\n\n" +
+                "[google-drive]\n" +
+                "drive-token = \"\"\n" +
                 "client-id = \"\"\n" +
                 "client-secret = \"\"\n" +
-                "password = \"\"\n" +
-                "drive-folder = \"DBC_Backups/\"\n" +
-                "time-zone = \"UTC\"\n" +
-                "log-level = \"info\"\n\n" +
+                "drive-folder = \"DBC_Backups/\"\n\n" +
                 "[database.example]\n" +
                 "ip = \"127.0.0.1\"\n" +
                 "port = 3000\n" +

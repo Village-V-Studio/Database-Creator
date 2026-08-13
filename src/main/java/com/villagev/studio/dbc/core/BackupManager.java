@@ -73,7 +73,12 @@ public class BackupManager {
     }
 
     private void uploadToGoogleDrive(File zipArchive, AppConfig appConfig) {
-        if (appConfig.getDriveToken().isEmpty() || appConfig.getClientId().isEmpty()) {
+        if (!"google-drive".equalsIgnoreCase(appConfig.getBackupType()) && !"gdrive".equalsIgnoreCase(appConfig.getBackupType())) {
+            System.out.println("Backup type is not 'google-drive'. Skipping Google Drive upload.");
+            return;
+        }
+
+        if (appConfig.getGoogleDrive().getDriveToken().isEmpty() || appConfig.getGoogleDrive().getClientId().isEmpty()) {
             System.out.println("Google Drive (Rclone) settings are incomplete. Skipping upload.");
             return;
         }
@@ -82,15 +87,15 @@ public class BackupManager {
         try {
             File rcloneConf = File.createTempFile("rclone_", ".conf");
             try (FileWriter writer = new FileWriter(rcloneConf)) {
-                writer.write("[gdrive]\n");
+                writer.write("[google-drive]\n");
                 writer.write("type = drive\n");
-                writer.write("client_id = " + appConfig.getClientId() + "\n");
-                writer.write("client_secret = " + appConfig.getClientSecret() + "\n");
-                writer.write("token = " + appConfig.getDriveToken() + "\n");
+                writer.write("client_id = " + appConfig.getGoogleDrive().getClientId() + "\n");
+                writer.write("client_secret = " + appConfig.getGoogleDrive().getClientSecret() + "\n");
+                writer.write("token = " + appConfig.getGoogleDrive().getDriveToken() + "\n");
             }
 
             ProcessBuilder pb = new ProcessBuilder(
-                    "rclone", "copy", zipArchive.getAbsolutePath(), "gdrive:" + appConfig.getDriveFolder(), "--config",
+                    "rclone", "copy", zipArchive.getAbsolutePath(), "google-drive:" + appConfig.getGoogleDrive().getDriveFolder(), "--config",
                     rcloneConf.getAbsolutePath());
             pb.inheritIO();
             Process process = pb.start();

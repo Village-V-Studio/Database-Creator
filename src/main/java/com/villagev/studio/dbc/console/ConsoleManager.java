@@ -12,20 +12,20 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 import com.villagev.studio.dbc.config.AppConfig;
-import com.villagev.studio.dbc.config.ConfigManager;
+import com.villagev.studio.dbc.config.Manager;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 import com.villagev.studio.dbc.core.BackupManager;
 import com.villagev.studio.dbc.core.DatabaseManager;
 
 public class ConsoleManager {
-    private final ConfigManager configManager;
+    private final Manager configManager;
     private final DatabaseManager dbManager;
     private final BackupManager backupManager;
 
     private String pendingCommand = null;
     private Instant pendingCommandTime = null;
 
-    public ConsoleManager(ConfigManager configManager, DatabaseManager dbManager, BackupManager backupManager) {
+    public ConsoleManager(Manager configManager, DatabaseManager dbManager, BackupManager backupManager) {
         this.configManager = configManager;
         this.dbManager = dbManager;
         this.backupManager = backupManager;

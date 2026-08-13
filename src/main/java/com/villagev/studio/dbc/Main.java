@@ -4,7 +4,7 @@ import java.util.TimeZone;
 
 public class Main {
     public static void main(String[] args) {
-        com.villagev.studio.dbc.config.ConfigManager configManager = new com.villagev.studio.dbc.config.ConfigManager();
+        com.villagev.studio.dbc.config.Manager configManager = new com.villagev.studio.dbc.config.Manager();
         configManager.loadConfig();
         com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();
 
