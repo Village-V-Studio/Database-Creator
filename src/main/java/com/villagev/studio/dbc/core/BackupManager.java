@@ -33,7 +33,10 @@ public class BackupManager {
 
         System.out.println("Starting backup for database: " + name);
 
-        dbManager.stopDatabase(name);
+        boolean wasRunning = dbManager.isRunning(name);
+        if (wasRunning) {
+            dbManager.stopDatabase(name);
+        }
 
         try {
             File sourceFolder = new File("databases", name);
@@ -46,22 +49,28 @@ public class BackupManager {
             File zipArchive = new File(backupsDir, name + "_" + dateStr + ".zip");
 
             ZipParameters zipParameters = new ZipParameters();
-            zipParameters.setEncryptFiles(true);
-            zipParameters.setEncryptionMethod(EncryptionMethod.AES);
-            zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
+            boolean hasPassword = appConfig.getPassword() != null && !appConfig.getPassword().isEmpty();
+            
+            if (hasPassword) {
+                zipParameters.setEncryptFiles(true);
+                zipParameters.setEncryptionMethod(EncryptionMethod.AES);
+                zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
+            }
 
-            try (ZipFile zipFile = new ZipFile(zipArchive, appConfig.getPassword().toCharArray())) {
+            try (ZipFile zipFile = hasPassword ? new ZipFile(zipArchive, appConfig.getPassword().toCharArray()) : new ZipFile(zipArchive)) {
                 zipFile.addFolder(sourceFolder, zipParameters);
             }
 
-            System.out.println("Successfully created encrypted backup: " + zipArchive.getName());
+            System.out.println("Successfully created " + (hasPassword ? "encrypted " : "") + "backup: " + zipArchive.getName());
 
             uploadToGoogleDrive(zipArchive, appConfig);
 
         } catch (Exception e) {
             System.err.println("Failed to create backup for " + name + ": " + e.getMessage());
         } finally {
-            dbManager.startDatabase(name, dbConfig);
+            if (wasRunning) {
+                dbManager.startDatabase(name, dbConfig);
+            }
         }
     }
 
@@ -74,7 +83,6 @@ public class BackupManager {
 
     private void uploadToGoogleDrive(File zipArchive, AppConfig appConfig) {
         if (!"google-drive".equalsIgnoreCase(appConfig.getBackupType()) && !"gdrive".equalsIgnoreCase(appConfig.getBackupType())) {
-            System.out.println("Backup type is not 'google-drive'. Skipping Google Drive upload.");
             return;
         }
 

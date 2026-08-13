@@ -21,6 +21,10 @@ public class DatabaseManager {
         }
     }
 
+    public boolean isRunning(String name) {
+        return activeDatabases.containsKey(name);
+    }
+
     public void startDatabase(String name, DatabaseConfig config) {
         if (activeDatabases.containsKey(name)) {
             System.out.println("Database " + name + " is already running.");
