@@ -11,6 +11,11 @@ import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.AesKeyStrength;
 import net.lingala.zip4j.model.enums.EncryptionMethod;
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
 import com.villagev.studio.dbc.config.AppConfig;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 
@@ -50,20 +55,23 @@ public class BackupManager {
 
             ZipParameters zipParameters = new ZipParameters();
             boolean hasPassword = appConfig.getPassword() != null && !appConfig.getPassword().isEmpty();
-            
+
             if (hasPassword) {
                 zipParameters.setEncryptFiles(true);
                 zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                 zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
             }
 
-            try (ZipFile zipFile = hasPassword ? new ZipFile(zipArchive, appConfig.getPassword().toCharArray()) : new ZipFile(zipArchive)) {
+            try (ZipFile zipFile = hasPassword ? new ZipFile(zipArchive, appConfig.getPassword().toCharArray())
+                    : new ZipFile(zipArchive)) {
                 zipFile.addFolder(sourceFolder, zipParameters);
             }
 
-            System.out.println("Successfully created " + (hasPassword ? "encrypted " : "") + "backup: " + zipArchive.getName());
+            System.out.println(
+                    "Successfully created " + (hasPassword ? "encrypted " : "") + "backup: " + zipArchive.getName());
 
             uploadToGoogleDrive(zipArchive, appConfig);
+            uploadToServer(zipArchive, appConfig);
 
         } catch (Exception e) {
             System.err.println("Failed to create backup for " + name + ": " + e.getMessage());
@@ -82,11 +90,13 @@ public class BackupManager {
     }
 
     private void uploadToGoogleDrive(File zipArchive, AppConfig appConfig) {
-        if (!"google-drive".equalsIgnoreCase(appConfig.getBackupType()) && !"gdrive".equalsIgnoreCase(appConfig.getBackupType())) {
+        if (!"google-drive".equalsIgnoreCase(appConfig.getBackupType())
+                && !"gdrive".equalsIgnoreCase(appConfig.getBackupType())) {
             return;
         }
 
-        if (appConfig.getGoogleDrive().getDriveToken().isEmpty() || appConfig.getGoogleDrive().getClientId().isEmpty()) {
+        if (appConfig.getGoogleDrive().getDriveToken().isEmpty()
+                || appConfig.getGoogleDrive().getClientId().isEmpty()) {
             System.out.println("Google Drive (Rclone) settings are incomplete. Skipping upload.");
             return;
         }
@@ -103,7 +113,8 @@ public class BackupManager {
             }
 
             ProcessBuilder pb = new ProcessBuilder(
-                    "rclone", "copy", zipArchive.getAbsolutePath(), "google-drive:" + appConfig.getGoogleDrive().getDriveFolder(), "--config",
+                    "rclone", "copy", zipArchive.getAbsolutePath(),
+                    "google-drive:" + appConfig.getGoogleDrive().getDriveFolder(), "--config",
                     rcloneConf.getAbsolutePath());
             pb.inheritIO();
             Process process = pb.start();
@@ -119,6 +130,70 @@ public class BackupManager {
 
         } catch (Exception e) {
             System.err.println("Failed to upload to Google Drive: " + e.getMessage());
+        }
+    }
+
+    private void uploadToServer(File zipArchive, AppConfig appConfig) {
+        if (!"server".equalsIgnoreCase(appConfig.getBackupType())) {
+            return;
+        }
+
+        if (appConfig.getServer().getIp().isEmpty() || appConfig.getServer().getUsername().isEmpty()) {
+            System.out.println("Server settings (IP or Username) are incomplete. Skipping SFTP upload.");
+            return;
+        }
+
+        System.out.println("Uploading " + zipArchive.getName() + " to remote server via SFTP...");
+
+        JSch jsch = new JSch();
+        Session session = null;
+        ChannelSftp sftpChannel = null;
+
+        try {
+            session = jsch.getSession(appConfig.getServer().getUsername(), appConfig.getServer().getIp(),
+                    appConfig.getServer().getPort());
+            session.setPassword(appConfig.getServer().getPassword().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            java.util.Properties config = new java.util.Properties();
+            config.put("StrictHostKeyChecking", "no");
+            session.setConfig(config);
+
+            System.out.println("Connecting to server " + appConfig.getServer().getIp() + "...");
+            session.connect(10000);
+
+            sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+
+            String remoteFolder = appConfig.getServer().getRemoteFolder();
+            if (!remoteFolder.endsWith("/")) {
+                remoteFolder += "/";
+            }
+
+            try {
+                sftpChannel.stat(remoteFolder);
+            } catch (SftpException e) {
+                if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
+                    System.out.println("Remote folder does not exist, creating: " + remoteFolder);
+                    sftpChannel.mkdir(remoteFolder);
+                } else {
+                    throw e;
+                }
+            }
+
+            String remoteFilePath = remoteFolder + zipArchive.getName();
+            sftpChannel.put(zipArchive.getAbsolutePath(), remoteFilePath);
+
+            System.out.println("Successfully uploaded to remote server: " + remoteFilePath);
+
+        } catch (Exception e) {
+            System.err.println("Failed to upload to remote server: " + e.getMessage());
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.disconnect();
+            }
+            if (session != null) {
+                session.disconnect();
+            }
         }
     }
 }
