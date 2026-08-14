@@ -14,7 +14,8 @@ public class AppConfig {
     @JsonProperty("backup-type")
     private String backupType = "local";
 
-    private String password = "";
+    @JsonProperty("password")
+    private char[] password = new char[0];
 
     @JsonProperty("google-drive")
     private GoogleDrive googleDrive = new GoogleDrive();
@@ -49,11 +50,11 @@ public class AppConfig {
         this.backupType = backupType;
     }
 
-    public String getPassword() {
+    public char[] getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(char[] password) {
         this.password = password;
     }
 

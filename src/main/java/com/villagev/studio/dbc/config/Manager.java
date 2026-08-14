@@ -8,7 +8,7 @@ import tools.jackson.dataformat.toml.TomlMapper;
 public class Manager {
     private static final String CONFIG_FILE_NAME = "config.toml";
     private final ObjectMapper tomlMapper;
-    private AppConfig currentConfig;
+    private volatile AppConfig currentConfig;
 
     public Manager() {
         this.tomlMapper = new TomlMapper();
@@ -18,6 +18,7 @@ public class Manager {
         File configFile = new File(CONFIG_FILE_NAME);
         if (!configFile.exists()) {
             createDefaultConfig(configFile);
+            secureFile(configFile);
         }
 
         try {
@@ -25,7 +26,12 @@ public class Manager {
             System.out.println("Configuration loaded successfully.");
         } catch (Exception e) {
             System.err.println("Failed to load configuration file: " + e.getMessage());
-            this.currentConfig = new AppConfig();
+            if (this.currentConfig == null) {
+                System.err.println("Critical error during initial startup. Shutting down.");
+                System.exit(1);
+            } else {
+                System.err.println("Keeping the previous configuration.");
+            }
         }
     }
 
@@ -64,5 +70,45 @@ public class Manager {
 
     public AppConfig getConfig() {
         return currentConfig;
+    }
+
+    private void secureFile(File file) {
+        try {
+            java.nio.file.Path path = file.toPath();
+            if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                java.util.Set<java.nio.file.attribute.PosixFilePermission> perms = new java.util.HashSet<>();
+                perms.add(java.nio.file.attribute.PosixFilePermission.OWNER_READ);
+                perms.add(java.nio.file.attribute.PosixFilePermission.OWNER_WRITE);
+                java.nio.file.Files.setPosixFilePermissions(path, perms);
+            } else if (path.getFileSystem().supportedFileAttributeViews().contains("acl")) {
+                java.nio.file.attribute.AclFileAttributeView aclView = java.nio.file.Files.getFileAttributeView(path, java.nio.file.attribute.AclFileAttributeView.class);
+                java.nio.file.attribute.UserPrincipal owner = java.nio.file.Files.getOwner(path);
+                java.nio.file.attribute.AclEntry entry = java.nio.file.attribute.AclEntry.newBuilder()
+                        .setType(java.nio.file.attribute.AclEntryType.ALLOW)
+                        .setPrincipal(owner)
+                        .setPermissions(
+                                java.nio.file.attribute.AclEntryPermission.READ_DATA,
+                                java.nio.file.attribute.AclEntryPermission.WRITE_DATA,
+                                java.nio.file.attribute.AclEntryPermission.APPEND_DATA,
+                                java.nio.file.attribute.AclEntryPermission.READ_NAMED_ATTRS,
+                                java.nio.file.attribute.AclEntryPermission.WRITE_NAMED_ATTRS,
+                                java.nio.file.attribute.AclEntryPermission.EXECUTE,
+                                java.nio.file.attribute.AclEntryPermission.READ_ATTRIBUTES,
+                                java.nio.file.attribute.AclEntryPermission.WRITE_ATTRIBUTES,
+                                java.nio.file.attribute.AclEntryPermission.DELETE,
+                                java.nio.file.attribute.AclEntryPermission.READ_ACL,
+                                java.nio.file.attribute.AclEntryPermission.SYNCHRONIZE)
+                        .build();
+                aclView.setAcl(java.util.Collections.singletonList(entry));
+            } else {
+                // Fallback
+                file.setReadable(false, false);
+                file.setReadable(true, true);
+                file.setWritable(false, false);
+                file.setWritable(true, true);
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Failed to set strict file permissions for " + file.getName());
+        }
     }
 }

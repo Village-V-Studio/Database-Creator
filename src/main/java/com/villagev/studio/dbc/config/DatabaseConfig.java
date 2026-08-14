@@ -6,7 +6,7 @@ public class DatabaseConfig {
     private String ip = "127.0.0.1";
     private int port;
     private String username = "root";
-    private String password = "password";
+    private char[] password = "password".toCharArray();
 
     @JsonProperty("auto-start")
     private boolean autoStart = false;
@@ -16,6 +16,9 @@ public class DatabaseConfig {
 
     @JsonProperty("backup-interval")
     private int backupInterval = 24;
+
+    @JsonProperty("max-local-backups")
+    private int maxLocalBackups = 7;
 
     public String getIp() {
         return ip;
@@ -41,11 +44,11 @@ public class DatabaseConfig {
         this.username = username;
     }
 
-    public String getPassword() {
+    public char[] getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(char[] password) {
         this.password = password;
     }
 
@@ -71,5 +74,13 @@ public class DatabaseConfig {
 
     public void setBackupInterval(int backupInterval) {
         this.backupInterval = backupInterval;
+    }
+
+    public int getMaxLocalBackups() {
+        return maxLocalBackups;
+    }
+
+    public void setMaxLocalBackups(int maxLocalBackups) {
+        this.maxLocalBackups = maxLocalBackups;
     }
 }

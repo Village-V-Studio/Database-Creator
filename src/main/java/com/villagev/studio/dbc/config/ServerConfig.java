@@ -6,7 +6,7 @@ public class ServerConfig {
     private String ip = "";
     private int port = 22;
     private String username = "";
-    private String password = "";
+    private char[] password = new char[0];
 
     @JsonProperty("remote-folder")
     private String remoteFolder = "/backups";
@@ -35,11 +35,11 @@ public class ServerConfig {
         this.username = username;
     }
 
-    public String getPassword() {
+    public char[] getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(char[] password) {
         this.password = password;
     }
 

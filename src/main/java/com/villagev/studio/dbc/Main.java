@@ -9,7 +9,14 @@ public class Main {
         com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();
 
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", config.getLogLevel().toLowerCase());
-        TimeZone.setDefault(TimeZone.getTimeZone(config.getTimeZone()));
+        try {
+            java.time.ZoneId zoneId = java.time.ZoneId.of(config.getTimeZone());
+            TimeZone.setDefault(TimeZone.getTimeZone(zoneId));
+        } catch (java.time.DateTimeException e) {
+            System.err.println("[CRITICAL] Invalid time-zone in config.toml: '" + config.getTimeZone() + "'");
+            System.err.println("Please specify a valid IANA time zone (e.g. 'Europe/Kyiv' or 'UTC').");
+            System.exit(1);
+        }
 
         System.out.println("Starting Database Creator...");
         System.out.println("Current timezone set to: " + TimeZone.getDefault().getID());
@@ -46,10 +53,29 @@ public class Main {
             return;
         }
 
+        String rclonePath = config.getGoogleDrive().getRclonePath();
+        java.io.File rcloneFile = new java.io.File(rclonePath);
+        boolean isNameValid = rcloneFile.getName().equals("rclone") || rcloneFile.getName().equals("rclone.exe");
+        boolean isPathValid = rclonePath.equals("rclone") || rclonePath.equals("rclone.exe") || (rcloneFile.isAbsolute() && rcloneFile.exists());
+        
+        if (!isNameValid || !isPathValid) {
+            System.out.println("\n[WARNING] Security: rclone-path must be 'rclone', 'rclone.exe', or a valid absolute path to the rclone executable.");
+            System.out.println("[WARNING] Cloud backups to Google Drive will be disabled.\n");
+            return;
+        }
+
         try {
-            Process process = new ProcessBuilder("rclone", "version").start();
-            process.waitFor();
-            System.out.println("Rclone detected! Cloud backups are available.");
+            Process process = new ProcessBuilder(rclonePath, "version")
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .start();
+            boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (finished) {
+                System.out.println("Rclone detected! Cloud backups are available.");
+            } else {
+                process.destroyForcibly();
+                throw new RuntimeException("rclone check timed out");
+            }
         } catch (Exception e) {
             System.out.println("\n[WARNING] 'rclone' is not installed or not found in PATH!");
             System.out.println("[WARNING] Cloud backups to Google Drive will not work.");
