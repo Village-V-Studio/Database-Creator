@@ -17,7 +17,7 @@ Setting up isolated databases for multiple applications or microservices typical
 
 ```toml
 time-zone = "UTC" # App and database timezone
-log-level = "info" # Console log verbosity (debug, info, warn, error)
+log-level = "warn" # Console log verbosity (debug, info, warn, error)
 backup-type = "local" # Choose: local, google-drive, or server
 password = "super_secure_password" # Using AES-256 encryption for ZIP archives (never lose it!)
 
@@ -46,11 +46,13 @@ backup-interval = 24 # in hours
 
 ## 🚀 Commands
 Use these commands to control your databases via the built-in interactive console:
-- `db enable [name1,name2]` — Start one or multiple databases (separated by commas).
-- `db disable [name1,name2]` — Stop one or multiple databases.
-- `db reload [name1,name2]` — Reload the config file. If no names are provided, applies to all databases. Databases removed from config will be safely stopped.
-- `db backup [name1,name2]` — Run a manual forced backup for specific databases (bypasses auto-backup setting).
-- `db stop` — Safely stop all databases and the program.
+- `enable [name1,name2]` — Start one or multiple databases (separated by commas).
+- `disable [name1,name2]` — Stop one or multiple databases.
+- `reload [name1,name2]` — Reload the config file. If no names are provided, applies to all databases. Databases removed from config will be safely stopped.
+- `backup [name1,name2]` — Run a manual forced backup for specific databases (bypasses auto-backup setting). Double tap for all.
+- `status` — Show the real-time status of all configured databases.
+- `stop` — Safely stop all databases and the program. (Requires double-tap confirmation).
+- `help` — Show the list of available commands.
 
 ## 🛠 Compilation and Start
 The project is compiled using Maven.

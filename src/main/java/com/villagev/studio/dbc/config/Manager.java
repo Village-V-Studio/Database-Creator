@@ -82,7 +82,8 @@ public class Manager {
                 perms.add(java.nio.file.attribute.PosixFilePermission.OWNER_WRITE);
                 java.nio.file.Files.setPosixFilePermissions(path, perms);
             } else if (path.getFileSystem().supportedFileAttributeViews().contains("acl")) {
-                java.nio.file.attribute.AclFileAttributeView aclView = java.nio.file.Files.getFileAttributeView(path, java.nio.file.attribute.AclFileAttributeView.class);
+                java.nio.file.attribute.AclFileAttributeView aclView = java.nio.file.Files.getFileAttributeView(path,
+                        java.nio.file.attribute.AclFileAttributeView.class);
                 java.nio.file.attribute.UserPrincipal owner = java.nio.file.Files.getOwner(path);
                 java.nio.file.attribute.AclEntry entry = java.nio.file.attribute.AclEntry.newBuilder()
                         .setType(java.nio.file.attribute.AclEntryType.ALLOW)

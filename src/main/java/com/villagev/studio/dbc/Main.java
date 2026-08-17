@@ -3,7 +3,24 @@ package com.villagev.studio.dbc;
 import java.util.TimeZone;
 
 public class Main {
+    private static java.io.RandomAccessFile appLockFileStream;
+
     public static void main(String[] args) {
+        try {
+            java.io.File lockFile = new java.io.File("dbc.lock");
+            appLockFileStream = new java.io.RandomAccessFile(lockFile, "rw");
+            java.nio.channels.FileLock lock = appLockFileStream.getChannel().tryLock();
+            if (lock == null) {
+                System.err.println("[CRITICAL] Another instance of Database Creator is already running in this directory.");
+                System.err.println("Only one instance is allowed to prevent database corruption and port conflicts.");
+                System.exit(1);
+            }
+            lockFile.deleteOnExit();
+        } catch (java.nio.channels.OverlappingFileLockException | java.io.IOException e) {
+            System.err.println("[CRITICAL] Another instance of Database Creator is already running in this directory.");
+            System.err.println("Only one instance is allowed to prevent database corruption and port conflicts.");
+            System.exit(1);
+        }
         com.villagev.studio.dbc.config.Manager configManager = new com.villagev.studio.dbc.config.Manager();
         configManager.loadConfig();
         com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();

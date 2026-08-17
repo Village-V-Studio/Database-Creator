@@ -25,7 +25,8 @@ public class Manager {
     private String pendingCommand = null;
     private Instant pendingCommandTime = null;
 
-    public Manager(com.villagev.studio.dbc.config.Manager configManager, DatabaseManager dbManager, BackupManager backupManager) {
+    public Manager(com.villagev.studio.dbc.config.Manager configManager, DatabaseManager dbManager,
+            BackupManager backupManager) {
         this.configManager = configManager;
         this.dbManager = dbManager;
         this.backupManager = backupManager;
@@ -45,7 +46,7 @@ public class Manager {
 
             com.villagev.studio.dbc.core.LogManager.setLineReader(lineReader);
 
-            System.out.println("Type 'db help' for a list of commands.");
+            System.out.println("Type 'help' for a list of commands.");
 
             try {
                 while (true) {
@@ -58,10 +59,10 @@ public class Manager {
                         System.out.println("\nShutting down Database Creator safely...");
                         break;
                     }
-    
+
                     if (line.isEmpty())
                         continue;
-    
+
                     if (!processCommand(line)) {
                         break;
                     }
@@ -88,9 +89,42 @@ public class Manager {
             return false;
         }
 
+        if (line.equalsIgnoreCase("stop")) {
+            if (pendingCommand != null && pendingCommand.equals("stop")) {
+                if (Instant.now().minusSeconds(5).isBefore(pendingCommandTime)) {
+                    pendingCommand = null;
+                    System.out.println("Shutting down Database Creator safely...");
+                    return false;
+                } else {
+                    System.out.println("Confirmation expired. Type again to confirm.");
+                    pendingCommand = null;
+                    return true;
+                }
+            } else {
+                pendingCommand = "stop";
+                pendingCommandTime = Instant.now();
+                System.out.println("Are you sure? Type 'stop' again within 5 seconds to confirm.");
+                return true;
+            }
+        }
+
+        if (line.equalsIgnoreCase("help") || line.equalsIgnoreCase("?")) {
+            System.out.println("Commands:");
+            System.out.println("  db enable [name1,name2]  - Start databases");
+            System.out.println("  db disable [name1,name2] - Stop databases");
+            System.out.println("  db reload [name1,name2]  - Reload config (and restart DBs)");
+            System.out.println("  db backup [name1,name2]  - Run manual backup (double tap for all)");
+            System.out.println("  db status                - Show all databases state");
+            System.out.println("  stop                     - Safely shutdown manager (double tap)");
+            System.out.println("  help                     - Show this help menu");
+            return true;
+        }
+
         String[] args = line.split("\\s+");
+        String action = args[0].toLowerCase();
+
         if (pendingCommand != null) {
-            if (args.length < 2 || !args[0].equalsIgnoreCase("db") || !args[1].equalsIgnoreCase(pendingCommand)) {
+            if (!action.equals(pendingCommand)) {
                 pendingCommand = null;
                 System.out.println("Confirmation cancelled.");
             }
@@ -98,51 +132,34 @@ public class Manager {
 
         AppConfig config = configManager.getConfig();
 
-        if (args[0].equalsIgnoreCase("db")) {
-            if (args.length < 2) {
-                System.out.println("Usage: db <enable|disable|reload|backup|stop|help> [name]");
-                return true;
-            }
+        String targets = null;
+        if (args.length > 1) {
+            targets = String.join(",", java.util.Arrays.copyOfRange(args, 1, args.length));
+        }
 
-            String action = args[1].toLowerCase();
-            String targets = null;
-            if (args.length > 2) {
-                targets = String.join(",", java.util.Arrays.copyOfRange(args, 2, args.length));
-            }
-
-            if (action.equals("stop") && targets != null) {
-                System.out.println("Command 'db stop' shuts down the entire manager and does not take arguments. Use 'db disable " + targets + "' to stop specific databases.");
-                return true;
-            }
-
-            if ((action.equals("backup") || action.equals("stop")) && targets == null) {
-                if (pendingCommand != null && pendingCommand.equals(action)) {
-                    if (Instant.now().minusSeconds(5).isBefore(pendingCommandTime)) {
-                        pendingCommand = null;
-                        if (action.equals("backup")) {
-                            manualBackupExecutor.submit(() -> backupManager.backupAllActive(config, true));
-                            System.out.println("Global backup process started in background...");
-                            return true;
-                        } else {
-                            System.out.println("Shutting down Database Creator safely...");
-                            return false;
-                        }
-                    } else {
-                        System.out.println("Confirmation expired. Type again to confirm.");
-                        pendingCommand = null;
-                        return true;
-                    }
+        if (action.equals("backup") && targets == null) {
+            if (pendingCommand != null && pendingCommand.equals(action)) {
+                if (Instant.now().minusSeconds(5).isBefore(pendingCommandTime)) {
+                    pendingCommand = null;
+                    manualBackupExecutor.submit(() -> backupManager.backupAllActive(config, true));
+                    System.out.println("Global backup process started in background...");
+                    return true;
                 } else {
-                    pendingCommand = action;
-                    pendingCommandTime = Instant.now();
-                    System.out.println("Are you sure? Type '" + line + "' again within 5 seconds to confirm.");
+                    System.out.println("Confirmation expired. Type again to confirm.");
+                    pendingCommand = null;
                     return true;
                 }
             } else {
-                pendingCommand = null;
+                pendingCommand = action;
+                pendingCommandTime = Instant.now();
+                System.out.println("Are you sure? Type '" + line + "' again within 5 seconds to confirm.");
+                return true;
             }
+        } else {
+            pendingCommand = null;
+        }
 
-            switch (action) {
+        switch (action) {
                 case "enable":
                     for (String name : resolveDbNames(targets, config)) {
                         dbManager.startDatabase(name, config.getDatabases().get(name));
@@ -177,7 +194,8 @@ public class Manager {
                             } else if (!newConfig.getDatabases().containsKey(name)) {
                                 System.out.println("Database " + name + " was removed from config. Stopping it.");
                                 dbManager.stopDatabase(name);
-                            } else if (isDbConfigChanged(config.getDatabases().get(name), newConfig.getDatabases().get(name))) {
+                            } else if (isDbConfigChanged(config.getDatabases().get(name),
+                                    newConfig.getDatabases().get(name))) {
                                 System.out.println("Reloading database: " + name + " (config changed)...");
                                 dbManager.stopDatabase(name);
                                 dbManager.startDatabase(name, newConfig.getDatabases().get(name));
@@ -195,7 +213,7 @@ public class Manager {
                         for (Map.Entry<String, DatabaseConfig> entry : newConfig.getDatabases().entrySet()) {
                             String name = entry.getKey();
                             DatabaseConfig newDbConfig = entry.getValue();
-                            
+
                             boolean isRunning = dbManager.isRunning(name);
                             if (newDbConfig.isAutoStart() || isRunning) {
                                 if (!config.getDatabases().containsKey(name)) {
@@ -218,26 +236,13 @@ public class Manager {
                         String name = entry.getKey();
                         DatabaseConfig dbConfig = entry.getValue();
                         String state = dbManager.isRunning(name) ? "[RUNNING]" : "[STOPPED]";
-                        System.out.printf("%-20s %-10s %-10s %-15s\n", name, state, dbConfig.getPort(), dbConfig.isAutoBackup());
+                        System.out.printf("%-20s %-10s %-10s %-15s\n", name, state, dbConfig.getPort(),
+                                dbConfig.isAutoBackup());
                     }
                     System.out.println("-------------------------------------------------------------\n");
                     break;
-                case "help":
-                    System.out.println("Commands:");
-                    System.out.println("  db enable [name1,name2]  - Start databases");
-                    System.out.println("  db disable [name1,name2] - Stop databases");
-                    System.out.println("  db reload [name1,name2]  - Reload config (and restart DBs)");
-                    System.out.println("  db backup [name1,name2]  - Run manual backup (double tap for all)");
-                    System.out.println("  db status                - Show all databases state");
-                    System.out.println("  db stop                  - Safely shutdown manager (double tap)");
-                    break;
-                default:
-                    System.out.println("Unknown action. Type 'db help'.");
-            }
-        } else if (line.equalsIgnoreCase("help") || line.equalsIgnoreCase("?")) {
-            System.out.println("Type 'db help' for a list of commands.");
-        } else {
-            System.out.println("Unknown command.");
+            default:
+                System.out.println("Unknown command. Type 'help'.");
         }
         return true;
     }
@@ -253,7 +258,8 @@ public class Manager {
         java.util.List<String> validNames = new java.util.ArrayList<>();
         for (String name : input.split(",")) {
             name = name.trim();
-            if (config.getDatabases().containsKey(name) || (newConfig != null && newConfig.getDatabases().containsKey(name))) {
+            if (config.getDatabases().containsKey(name)
+                    || (newConfig != null && newConfig.getDatabases().containsKey(name))) {
                 validNames.add(name);
             } else {
                 System.out.println("Database '" + name + "' not found in config. Skipping.");
@@ -267,13 +273,19 @@ public class Manager {
     }
 
     private boolean isDbConfigChanged(DatabaseConfig oldDb, DatabaseConfig newDb) {
-        // NOTE: We only compare fields that dictate the MariaDB daemon's network/auth state.
+        // NOTE: We only compare fields that dictate the MariaDB daemon's network/auth
+        // state.
         // If these change, the engine MUST restart.
-        // Other fields (autoBackup, maxLocalBackups) are read dynamically by DBC and do not require DB downtime.
-        if (oldDb.getPort() != newDb.getPort()) return true;
-        if (!java.util.Objects.equals(oldDb.getUsername(), newDb.getUsername())) return true;
-        if (!java.util.Arrays.equals(oldDb.getPassword(), newDb.getPassword())) return true;
-        if (!java.util.Objects.equals(oldDb.getIp(), newDb.getIp())) return true;
+        // Other fields (autoBackup, maxLocalBackups) are read dynamically by DBC and do
+        // not require DB downtime.
+        if (oldDb.getPort() != newDb.getPort())
+            return true;
+        if (!java.util.Objects.equals(oldDb.getUsername(), newDb.getUsername()))
+            return true;
+        if (!java.util.Arrays.equals(oldDb.getPassword(), newDb.getPassword()))
+            return true;
+        if (!java.util.Objects.equals(oldDb.getIp(), newDb.getIp()))
+            return true;
         return false;
     }
 
@@ -283,16 +295,13 @@ public class Manager {
             String word = line.word();
 
             if (index == 0) {
-                if ("db".startsWith(word.toLowerCase()))
-                    candidates.add(new Candidate("db"));
-            } else if (index == 1 && !line.words().isEmpty() && line.words().get(0).equalsIgnoreCase("db")) {
-                String[] actions = { "enable", "disable", "reload", "backup", "stop", "status", "help" };
-                for (String action : actions) {
-                    if (action.startsWith(word.toLowerCase()))
-                        candidates.add(new Candidate(action));
+                String[] actions = { "enable", "disable", "reload", "backup", "status", "stop", "help" };
+                for (String a : actions) {
+                    if (a.startsWith(word.toLowerCase()))
+                        candidates.add(new Candidate(a));
                 }
-            } else if (index == 2 && line.words().size() > 1 && line.words().get(0).equalsIgnoreCase("db")) {
-                String action = line.words().get(1).toLowerCase();
+            } else if (index == 1) {
+                String action = line.words().get(0).toLowerCase();
                 if (action.equals("enable") || action.equals("disable") || action.equals("reload")
                         || action.equals("backup")) {
                     String prefix = "";
