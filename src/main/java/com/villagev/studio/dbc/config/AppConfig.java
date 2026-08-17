@@ -9,7 +9,7 @@ public class AppConfig {
     private String timeZone = "UTC";
 
     @JsonProperty("log-level")
-    private String logLevel = "info";
+    private String logLevel = "warn";
 
     @JsonProperty("logs")
     private boolean logs = true;

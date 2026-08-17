@@ -6,8 +6,8 @@ Currently, the following versions of DBC (Database-Creator) are supported with s
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | ✅                 |
-| < 0.1   | ❌                 |
+| 1.0.x   | ✅                 |
+| < 1.0   | ❌                 |
 
 ## Reporting a Vulnerability
 

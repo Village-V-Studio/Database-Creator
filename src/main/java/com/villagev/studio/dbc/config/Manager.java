@@ -37,7 +37,7 @@ public class Manager {
 
     private void createDefaultConfig(File configFile) {
         String defaultToml = "time-zone = \"UTC\"\n" +
-                "log-level = \"info\"\n" +
+                "log-level = \"warn\"\n" +
                 "logs = true\n" +
                 "backup-type = \"local\"\n" +
                 "password = \"\"\n\n" +
