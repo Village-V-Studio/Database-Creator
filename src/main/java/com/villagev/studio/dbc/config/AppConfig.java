@@ -11,6 +11,9 @@ public class AppConfig {
     @JsonProperty("log-level")
     private String logLevel = "info";
 
+    @JsonProperty("logs")
+    private boolean logs = true;
+
     @JsonProperty("backup-type")
     private String backupType = "local";
 
@@ -40,6 +43,14 @@ public class AppConfig {
 
     public void setLogLevel(String logLevel) {
         this.logLevel = logLevel;
+    }
+
+    public boolean isLogs() {
+        return logs;
+    }
+
+    public void setLogs(boolean logs) {
+        this.logs = logs;
     }
 
     public String getBackupType() {

@@ -8,6 +8,8 @@ public class Main {
         configManager.loadConfig();
         com.villagev.studio.dbc.config.AppConfig config = configManager.getConfig();
 
+        com.villagev.studio.dbc.core.LogManager.init(config.isLogs());
+
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", config.getLogLevel().toLowerCase());
         try {
             java.time.ZoneId zoneId = java.time.ZoneId.of(config.getTimeZone());

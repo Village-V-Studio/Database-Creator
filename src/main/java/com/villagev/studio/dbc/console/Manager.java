@@ -43,6 +43,8 @@ public class Manager {
                     .completer(createCompleter())
                     .build();
 
+            com.villagev.studio.dbc.core.LogManager.setLineReader(lineReader);
+
             System.out.println("Type 'db help' for a list of commands.");
 
             try {
@@ -86,8 +88,15 @@ public class Manager {
             return false;
         }
 
-        AppConfig config = configManager.getConfig();
         String[] args = line.split("\\s+");
+        if (pendingCommand != null) {
+            if (args.length < 2 || !args[0].equalsIgnoreCase("db") || !args[1].equalsIgnoreCase(pendingCommand)) {
+                pendingCommand = null;
+                System.out.println("Confirmation cancelled.");
+            }
+        }
+
+        AppConfig config = configManager.getConfig();
 
         if (args[0].equalsIgnoreCase("db")) {
             if (args.length < 2) {
@@ -121,6 +130,7 @@ public class Manager {
                     } else {
                         System.out.println("Confirmation expired. Type again to confirm.");
                         pendingCommand = null;
+                        return true;
                     }
                 } else {
                     pendingCommand = action;
@@ -275,12 +285,6 @@ public class Manager {
             if (index == 0) {
                 if ("db".startsWith(word.toLowerCase()))
                     candidates.add(new Candidate("db"));
-                if ("help".startsWith(word.toLowerCase()))
-                    candidates.add(new Candidate("help"));
-                if ("?".startsWith(word))
-                    candidates.add(new Candidate("?"));
-                if ("exit".startsWith(word.toLowerCase()))
-                    candidates.add(new Candidate("exit"));
             } else if (index == 1 && !line.words().isEmpty() && line.words().get(0).equalsIgnoreCase("db")) {
                 String[] actions = { "enable", "disable", "reload", "backup", "stop", "status", "help" };
                 for (String action : actions) {
