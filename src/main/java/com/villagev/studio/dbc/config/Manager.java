@@ -103,7 +103,6 @@ public class Manager {
                         .build();
                 aclView.setAcl(java.util.Collections.singletonList(entry));
             } else {
-                // Fallback
                 file.setReadable(false, false);
                 file.setReadable(true, true);
                 file.setWritable(false, false);

@@ -11,7 +11,8 @@ public class Main {
             appLockFileStream = new java.io.RandomAccessFile(lockFile, "rw");
             java.nio.channels.FileLock lock = appLockFileStream.getChannel().tryLock();
             if (lock == null) {
-                System.err.println("[CRITICAL] Another instance of Database Creator is already running in this directory.");
+                System.err.println(
+                        "[CRITICAL] Another instance of Database Creator is already running in this directory.");
                 System.err.println("Only one instance is allowed to prevent database corruption and port conflicts.");
                 System.exit(1);
             }
@@ -28,7 +29,6 @@ public class Main {
         com.villagev.studio.dbc.core.LogManager.init(config.isLogs());
 
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", config.getLogLevel().toLowerCase());
-        // Silence the noisy stack traces from ManagedProcess when a process is killed
         System.setProperty("org.slf4j.simpleLogger.log.ch.vorburger.exec.ManagedProcess", "off");
         try {
             java.time.ZoneId zoneId = java.time.ZoneId.of(config.getTimeZone());
@@ -77,10 +77,12 @@ public class Main {
         String rclonePath = config.getGoogleDrive().getRclonePath();
         java.io.File rcloneFile = new java.io.File(rclonePath);
         boolean isNameValid = rcloneFile.getName().equals("rclone") || rcloneFile.getName().equals("rclone.exe");
-        boolean isPathValid = rclonePath.equals("rclone") || rclonePath.equals("rclone.exe") || (rcloneFile.isAbsolute() && rcloneFile.exists());
-        
+        boolean isPathValid = rclonePath.equals("rclone") || rclonePath.equals("rclone.exe")
+                || (rcloneFile.isAbsolute() && rcloneFile.exists());
+
         if (!isNameValid || !isPathValid) {
-            System.out.println("\n[WARNING] Security: rclone-path must be 'rclone', 'rclone.exe', or a valid absolute path to the rclone executable.");
+            System.out.println(
+                    "\n[WARNING] Security: rclone-path must be 'rclone', 'rclone.exe', or a valid absolute path to the rclone executable.");
             System.out.println("[WARNING] Cloud backups to Google Drive will be disabled.\n");
             return;
         }

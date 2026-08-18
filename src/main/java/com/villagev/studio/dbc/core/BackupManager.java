@@ -49,7 +49,8 @@ public class BackupManager {
             try {
                 boolean wasRunning = dbManager.isRunning(name);
                 if (!wasRunning) {
-                    System.out.println("Database " + name + " is not running. Logical backup requires a running database.");
+                    System.out.println(
+                            "Database " + name + " is not running. Logical backup requires a running database.");
                     return;
                 }
 
@@ -58,21 +59,23 @@ public class BackupManager {
                     String mysqldumpName = os.contains("win") ? "mysqldump.exe" : "mysqldump";
                     File binariesDir = dbManager.getBinariesDir();
                     File mysqldumpExe = new File(new File(binariesDir, "bin"), mysqldumpName);
-                    
+
                     if (!mysqldumpExe.exists()) {
                         mysqldumpExe = new File(binariesDir, mysqldumpName);
                     }
-                    
+
                     if (!mysqldumpExe.exists()) {
-                         System.err.println("Could not find " + mysqldumpName + " in " + binariesDir.getAbsolutePath() + ". Cannot perform logical backup.");
-                         return;
+                        System.err.println("Could not find " + mysqldumpName + " in " + binariesDir.getAbsolutePath()
+                                + ". Cannot perform logical backup.");
+                        return;
                     }
 
                     String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
                     File sqlDump = new File(backupsDir, name + "_" + dateStr + ".sql");
-                    
-                    String bindIp = dbConfig.getIp() != null && !dbConfig.getIp().isEmpty() ? dbConfig.getIp() : "127.0.0.1";
-                    
+
+                    String bindIp = dbConfig.getIp() != null && !dbConfig.getIp().isEmpty() ? dbConfig.getIp()
+                            : "127.0.0.1";
+
                     File myCnf = File.createTempFile("my", ".cnf");
                     myCnf.setReadable(false, false);
                     myCnf.setReadable(true, true);
@@ -80,34 +83,34 @@ public class BackupManager {
 
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(myCnf)) {
                         fos.write("[client]\npassword=".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                        java.nio.ByteBuffer pwBuf = java.nio.charset.StandardCharsets.UTF_8.encode(java.nio.CharBuffer.wrap(dbConfig.getPassword()));
+                        java.nio.ByteBuffer pwBuf = java.nio.charset.StandardCharsets.UTF_8
+                                .encode(java.nio.CharBuffer.wrap(dbConfig.getPassword()));
                         byte[] pwBytes = new byte[pwBuf.remaining()];
                         pwBuf.get(pwBytes);
                         fos.write(pwBytes);
                         java.util.Arrays.fill(pwBytes, (byte) 0);
-                        
+
                         ProcessBuilder pb = new ProcessBuilder(
-                            mysqldumpExe.getAbsolutePath(),
-                            "--defaults-file=" + myCnf.getAbsolutePath(),
-                            "-h", bindIp,
-                            "-P", String.valueOf(dbConfig.getPort()),
-                            "-u", dbConfig.getUsername().isEmpty() ? "root" : dbConfig.getUsername(),
-                            name
-                        );
-                        
+                                mysqldumpExe.getAbsolutePath(),
+                                "--defaults-file=" + myCnf.getAbsolutePath(),
+                                "-h", bindIp,
+                                "-P", String.valueOf(dbConfig.getPort()),
+                                "-u", dbConfig.getUsername().isEmpty() ? "root" : dbConfig.getUsername(),
+                                name);
+
                         pb.redirectOutput(sqlDump);
                         pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-                        
+
                         Process process = pb.start();
                         boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.MINUTES);
-                        
+
                         if (!finished) {
                             process.destroyForcibly();
                             throw new RuntimeException("mysqldump timed out after 5 minutes.");
                         }
-                        
+
                         if (process.exitValue() != 0) {
-                             throw new RuntimeException("mysqldump failed with exit code " + process.exitValue());
+                            throw new RuntimeException("mysqldump failed with exit code " + process.exitValue());
                         }
                     } finally {
                         myCnf.delete();
@@ -116,15 +119,15 @@ public class BackupManager {
                     boolean hasPassword = appConfig.getPassword() != null && appConfig.getPassword().length > 0;
                     try {
                         zipArchive = new File(backupsDir, name + "_" + dateStr + ".zip");
-        
+
                         ZipParameters zipParameters = new ZipParameters();
-        
+
                         if (hasPassword) {
                             zipParameters.setEncryptFiles(true);
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
                         }
-        
+
                         try (ZipFile zipFile = hasPassword ? new ZipFile(zipArchive, appConfig.getPassword())
                                 : new ZipFile(zipArchive)) {
                             zipFile.addFile(sqlDump, zipParameters);
@@ -134,7 +137,8 @@ public class BackupManager {
                     }
 
                     System.out.println(
-                            "Successfully created " + (hasPassword ? "encrypted " : "") + "logical backup: " + zipArchive.getName());
+                            "Successfully created " + (hasPassword ? "encrypted " : "") + "logical backup: "
+                                    + zipArchive.getName());
 
                 } catch (Exception e) {
                     System.err.println("Failed to create backup for " + name + ": " + e.getMessage());
@@ -152,13 +156,16 @@ public class BackupManager {
     }
 
     private void rotateLocalBackups(String dbName, int maxBackups) {
-        if (maxBackups <= 0) return;
-        
-        File[] allBackups = backupsDir.listFiles((dir, filename) -> filename.startsWith(dbName + "_") && filename.endsWith(".zip"));
-        if (allBackups == null || allBackups.length <= maxBackups) return;
+        if (maxBackups <= 0)
+            return;
+
+        File[] allBackups = backupsDir
+                .listFiles((dir, filename) -> filename.startsWith(dbName + "_") && filename.endsWith(".zip"));
+        if (allBackups == null || allBackups.length <= maxBackups)
+            return;
 
         java.util.Arrays.sort(allBackups, java.util.Comparator.comparingLong(File::lastModified));
-        
+
         int filesToDelete = allBackups.length - maxBackups;
         for (int i = 0; i < filesToDelete; i++) {
             if (allBackups[i].delete()) {
@@ -189,10 +196,12 @@ public class BackupManager {
         String rclonePath = appConfig.getGoogleDrive().getRclonePath();
         java.io.File rcloneFile = new java.io.File(rclonePath);
         boolean isNameValid = rcloneFile.getName().equals("rclone") || rcloneFile.getName().equals("rclone.exe");
-        boolean isPathValid = rclonePath.equals("rclone") || rclonePath.equals("rclone.exe") || (rcloneFile.isAbsolute() && rcloneFile.exists());
-        
+        boolean isPathValid = rclonePath.equals("rclone") || rclonePath.equals("rclone.exe")
+                || (rcloneFile.isAbsolute() && rcloneFile.exists());
+
         if (!isNameValid || !isPathValid) {
-            System.err.println("Security Error: rclone path must be 'rclone', 'rclone.exe', or a valid absolute path. Upload aborted.");
+            System.err.println(
+                    "Security Error: rclone path must be 'rclone', 'rclone.exe', or a valid absolute path. Upload aborted.");
             return;
         }
 
@@ -201,7 +210,7 @@ public class BackupManager {
             ProcessBuilder pb = new ProcessBuilder(
                     rclonePath, "copy", zipArchive.getAbsolutePath(),
                     "google-drive:" + appConfig.getGoogleDrive().getDriveFolder());
-            
+
             Map<String, String> env = pb.environment();
             env.put("RCLONE_CONFIG_GOOGLE_DRIVE_TYPE", "drive");
             env.put("RCLONE_CONFIG_GOOGLE_DRIVE_CLIENT_ID", appConfig.getGoogleDrive().getClientId());
@@ -215,7 +224,7 @@ public class BackupManager {
                 process.destroyForcibly();
                 throw new RuntimeException("Rclone upload timed out after 10 minutes.");
             }
-            
+
             int exitCode = process.exitValue();
             if (exitCode == 0) {
                 System.out.println("Successfully uploaded to Google Drive!");
@@ -247,15 +256,16 @@ public class BackupManager {
         try {
             session = jsch.getSession(appConfig.getServer().getUsername(), appConfig.getServer().getIp(),
                     appConfig.getServer().getPort());
-                    
-            java.nio.ByteBuffer byteBuffer = java.nio.charset.StandardCharsets.UTF_8.encode(java.nio.CharBuffer.wrap(appConfig.getServer().getPassword()));
+
+            java.nio.ByteBuffer byteBuffer = java.nio.charset.StandardCharsets.UTF_8
+                    .encode(java.nio.CharBuffer.wrap(appConfig.getServer().getPassword()));
             byte[] passwordBytes = new byte[byteBuffer.remaining()];
             byteBuffer.get(passwordBytes);
             session.setPassword(passwordBytes);
             java.util.Arrays.fill(passwordBytes, (byte) 0);
 
-            // Require strict host key checking using the system's known_hosts file to prevent MITM attacks
-            String knownHostsPath = System.getProperty("user.home") + File.separator + ".ssh" + File.separator + "known_hosts";
+            String knownHostsPath = System.getProperty("user.home") + File.separator + ".ssh" + File.separator
+                    + "known_hosts";
             File knownHostsFile = new File(knownHostsPath);
             if (!knownHostsFile.exists()) {
                 if (knownHostsFile.getParentFile() != null) {

@@ -45,22 +45,23 @@ public class DatabaseManager {
             for (Map.Entry<String, DatabaseConfig> entry : activeConfigs.entrySet()) {
                 String name = entry.getKey();
                 DatabaseConfig config = entry.getValue();
-                
+
                 try (Socket socket = new Socket("127.0.0.1", config.getPort())) {
-                    // Send MySQL COM_QUIT packet (0x01) to gracefully close connection and prevent "Aborted connection" warning
-                    socket.getOutputStream().write(new byte[]{0x01, 0x00, 0x00, 0x00, 0x01});
+                    socket.getOutputStream().write(new byte[] { 0x01, 0x00, 0x00, 0x00, 0x01 });
                     socket.getOutputStream().flush();
                 } catch (IOException e) {
-                    System.err.println("\n[WATCHDOG] WARNING: Database '" + name + "' on port " + config.getPort() + " has crashed or hung!");
+                    System.err.println("\n[WATCHDOG] WARNING: Database '" + name + "' on port " + config.getPort()
+                            + " has crashed or hung!");
                     System.err.println("[WATCHDOG] Attempting to restart database '" + name + "'...");
-                    
+
                     stopDatabase(name);
-                    
+
                     boolean success = startDatabase(name, config);
                     if (success) {
                         System.out.println("[WATCHDOG] SUCCESS: Database '" + name + "' was successfully recovered!");
                     } else {
-                        System.err.println("[WATCHDOG] ERROR: FAILED to recover database '" + name + "'. It will remain disabled.");
+                        System.err.println("[WATCHDOG] ERROR: FAILED to recover database '" + name
+                                + "'. It will remain disabled.");
                     }
                 }
             }
@@ -81,7 +82,8 @@ public class DatabaseManager {
             return true;
         }
         if (!name.matches("^[a-zA-Z0-9_-]+$")) {
-            System.err.println("Invalid database name: '" + name + "'. Only alphanumeric characters, hyphens, and underscores are allowed.");
+            System.err.println("Invalid database name: '" + name
+                    + "'. Only alphanumeric characters, hyphens, and underscores are allowed.");
             return false;
         }
 
@@ -93,7 +95,8 @@ public class DatabaseManager {
 
             File dataDir = new File(databasesDir, name);
 
-            boolean isNewDb = !dataDir.exists() || (dataDir.isDirectory() && dataDir.list() != null && dataDir.list().length == 0);
+            boolean isNewDb = !dataDir.exists()
+                    || (dataDir.isDirectory() && dataDir.list() != null && dataDir.list().length == 0);
 
             configBuilder.setDataDir(dataDir);
             configBuilder.setBaseDir(binariesDir);
@@ -104,19 +107,21 @@ public class DatabaseManager {
 
             if (!config.getUsername().equals("root") || config.getPassword().length > 0) {
                 if (!config.getUsername().matches("^[a-zA-Z0-9_]+$")) {
-                    throw new IllegalArgumentException("Username must only contain alphanumeric characters and underscores.");
+                    throw new IllegalArgumentException(
+                            "Username must only contain alphanumeric characters and underscores.");
                 }
-                
+
                 String safeUser = config.getUsername();
                 String safePass = new String(config.getPassword()).replace("\\", "\\\\").replace("'", "''");
-                
+
                 String bindIp = config.getIp() != null && !config.getIp().isEmpty() ? config.getIp() : "127.0.0.1";
                 if (!bindIp.matches("^[a-zA-Z0-9.-]+$") && !bindIp.equals("%")) {
                     throw new IllegalArgumentException("Invalid IP address or hostname in config.");
                 }
-                
+
                 String sql = "CREATE DATABASE IF NOT EXISTS `" + name + "`; " +
-                        "CREATE USER IF NOT EXISTS '" + safeUser + "'@'" + bindIp + "' IDENTIFIED BY '" + safePass + "'; " +
+                        "CREATE USER IF NOT EXISTS '" + safeUser + "'@'" + bindIp + "' IDENTIFIED BY '" + safePass
+                        + "'; " +
                         "GRANT ALL PRIVILEGES ON `" + name + "`.* TO '" + safeUser + "'@'" + bindIp + "'; " +
                         "ALTER USER IF EXISTS '" + safeUser + "'@'" + bindIp + "' IDENTIFIED BY '" + safePass + "'; " +
                         "CREATE USER IF NOT EXISTS '" + safeUser + "'@'localhost' IDENTIFIED BY '" + safePass + "'; " +
@@ -124,10 +129,13 @@ public class DatabaseManager {
                         "ALTER USER IF EXISTS '" + safeUser + "'@'localhost' IDENTIFIED BY '" + safePass + "'; " +
                         "FLUSH PRIVILEGES;";
                 try {
-                    String connectionPassword = (!isNewDb && config.getUsername().equals("root")) ? new String(config.getPassword()) : null;
+                    String connectionPassword = (!isNewDb && config.getUsername().equals("root"))
+                            ? new String(config.getPassword())
+                            : null;
                     db.run(sql, "root", connectionPassword, null);
                 } catch (Exception e) {
-                    System.err.println("Warning: Failed to update user privileges. If you changed the password in config, you might need to update it manually in the database.");
+                    System.err.println(
+                            "Warning: Failed to update user privileges. If you changed the password in config, you might need to update it manually in the database.");
                 }
             }
 
@@ -150,11 +158,34 @@ public class DatabaseManager {
         }
 
         DB db = activeDatabases.remove(name);
-        activeConfigs.remove(name);
+        DatabaseConfig config = activeConfigs.remove(name);
 
         if (db != null) {
             try {
                 System.out.println("Stopping database: " + name + "...");
+
+                if (config != null) {
+                    String osExt = System.getProperty("os.name").toLowerCase().contains("win") ? ".exe" : "";
+                    File mysqladmin = new File(new File(binariesDir, "bin"), "mysqladmin" + osExt);
+                    if (mysqladmin.exists()) {
+                        java.util.List<String> cmd = new java.util.ArrayList<>();
+                        cmd.add(mysqladmin.getAbsolutePath());
+                        cmd.add("-u");
+                        cmd.add(config.getUsername());
+                        if (config.getPassword().length > 0) {
+                            cmd.add("-p" + new String(config.getPassword()));
+                        }
+                        cmd.add("--port=" + config.getPort());
+                        cmd.add("-h");
+                        cmd.add("127.0.0.1");
+                        cmd.add("shutdown");
+
+                        ProcessBuilder pb = new ProcessBuilder(cmd);
+                        Process p = pb.start();
+                        p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                    }
+                }
+
                 db.stop();
                 System.out.println("Database " + name + " stopped.");
             } catch (Exception e) {
