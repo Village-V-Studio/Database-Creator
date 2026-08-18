@@ -28,6 +28,8 @@ public class Main {
         com.villagev.studio.dbc.core.LogManager.init(config.isLogs());
 
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", config.getLogLevel().toLowerCase());
+        // Silence the noisy stack traces from ManagedProcess when a process is killed
+        System.setProperty("org.slf4j.simpleLogger.log.ch.vorburger.exec.ManagedProcess", "off");
         try {
             java.time.ZoneId zoneId = java.time.ZoneId.of(config.getTimeZone());
             TimeZone.setDefault(TimeZone.getTimeZone(zoneId));

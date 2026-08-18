@@ -1,8 +1,13 @@
 package com.villagev.studio.dbc.core;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import ch.vorburger.mariadb4j.DB;
 import ch.vorburger.mariadb4j.DBConfigurationBuilder;
@@ -14,11 +19,52 @@ public class DatabaseManager {
     private final Map<String, DatabaseConfig> activeConfigs = new java.util.concurrent.ConcurrentHashMap<>();
     private final File databasesDir = new File("databases");
     private final File binariesDir = new File("mariaDB_binaries");
+    private final ScheduledExecutorService watchdogExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public DatabaseManager() {
         if (!databasesDir.exists()) {
             databasesDir.mkdirs();
         }
+        cleanupZombies();
+        startWatchdog();
+    }
+
+    private void cleanupZombies() {
+        ProcessHandle.allProcesses().forEach(p -> {
+            p.info().command().ifPresent(cmd -> {
+                if (cmd.contains(binariesDir.getName()) && (cmd.endsWith("mysqld") || cmd.endsWith("mysqld.exe"))) {
+                    System.out.println("Cleaning up orphaned database process from previous run: " + p.pid());
+                    p.destroyForcibly();
+                }
+            });
+        });
+    }
+
+    private void startWatchdog() {
+        watchdogExecutor.scheduleAtFixedRate(() -> {
+            for (Map.Entry<String, DatabaseConfig> entry : activeConfigs.entrySet()) {
+                String name = entry.getKey();
+                DatabaseConfig config = entry.getValue();
+                
+                try (Socket socket = new Socket("127.0.0.1", config.getPort())) {
+                    // Send MySQL COM_QUIT packet (0x01) to gracefully close connection and prevent "Aborted connection" warning
+                    socket.getOutputStream().write(new byte[]{0x01, 0x00, 0x00, 0x00, 0x01});
+                    socket.getOutputStream().flush();
+                } catch (IOException e) {
+                    System.err.println("\n[WATCHDOG] WARNING: Database '" + name + "' on port " + config.getPort() + " has crashed or hung!");
+                    System.err.println("[WATCHDOG] Attempting to restart database '" + name + "'...");
+                    
+                    stopDatabase(name);
+                    
+                    boolean success = startDatabase(name, config);
+                    if (success) {
+                        System.out.println("[WATCHDOG] SUCCESS: Database '" + name + "' was successfully recovered!");
+                    } else {
+                        System.err.println("[WATCHDOG] ERROR: FAILED to recover database '" + name + "'. It will remain disabled.");
+                    }
+                }
+            }
+        }, 30, 30, TimeUnit.SECONDS);
     }
 
     public boolean isRunning(String name) {
@@ -118,6 +164,7 @@ public class DatabaseManager {
     }
 
     public void stopAll() {
+        watchdogExecutor.shutdownNow();
         for (String name : new HashMap<>(activeDatabases).keySet()) {
             stopDatabase(name);
         }
