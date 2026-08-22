@@ -6,7 +6,7 @@
 
     <groupId>com.villagev.studio.dbc</groupId>
     <artifactId>DBC</artifactId>
-    <version>0.9.4-beta</version>
+    <version>1.0</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
