@@ -110,13 +110,13 @@ public class Manager {
 
         if (line.equalsIgnoreCase("help") || line.equalsIgnoreCase("?")) {
             System.out.println("Commands:");
-            System.out.println("  db enable [name1,name2]  - Start databases");
-            System.out.println("  db disable [name1,name2] - Stop databases");
-            System.out.println("  db reload [name1,name2]  - Reload config (and restart DBs)");
-            System.out.println("  db backup [name1,name2]  - Run manual backup (double tap for all)");
-            System.out.println("  db status                - Show all databases state");
-            System.out.println("  stop                     - Safely shutdown manager (double tap)");
-            System.out.println("  help                     - Show this help menu");
+            System.out.println("  enable [name1,name2]  - Start databases");
+            System.out.println("  disable [name1,name2] - Stop databases");
+            System.out.println("  reload [name1,name2]  - Reload config (and restart DBs)");
+            System.out.println("  backup [name1,name2]  - Run manual backup (double tap for all)");
+            System.out.println("  status                - Show all databases state");
+            System.out.println("  stop                  - Safely shutdown manager (double tap)");
+            System.out.println("  help                  - Show this help menu");
             return true;
         }
 
