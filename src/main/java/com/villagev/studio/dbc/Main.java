@@ -6,6 +6,7 @@ public class Main {
     private static java.io.RandomAccessFile appLockFileStream;
 
     public static void main(String[] args) {
+        System.out.println("Starting Database Creator v" + getVersion() + "...");
         try {
             java.io.File lockFile = new java.io.File("dbc.lock");
             appLockFileStream = new java.io.RandomAccessFile(lockFile, "rw");
@@ -39,13 +40,13 @@ public class Main {
             System.exit(1);
         }
 
-        System.out.println("Starting Database Creator...");
         System.out.println("Current timezone set to: " + TimeZone.getDefault().getID());
         System.out.println("Log level set to: " + config.getLogLevel().toUpperCase());
 
         checkRclone(config);
 
-        com.villagev.studio.dbc.core.DatabaseManager dbManager = new com.villagev.studio.dbc.core.DatabaseManager();
+        com.villagev.studio.dbc.core.DatabaseManager dbManager = new com.villagev.studio.dbc.core.DatabaseManager(
+                config);
         com.villagev.studio.dbc.core.BackupManager backupManager = new com.villagev.studio.dbc.core.BackupManager(
                 dbManager);
         com.villagev.studio.dbc.core.Scheduler scheduler = new com.villagev.studio.dbc.core.Scheduler(configManager,
@@ -104,5 +105,24 @@ public class Main {
             System.out.println("[WARNING] Cloud backups to Google Drive will not work.");
             System.out.println("[WARNING] Local encrypted .zip backups will still be created.\n");
         }
+    }
+
+    public static String getVersion() {
+        try (java.io.InputStream is = Main.class.getResourceAsStream("/version.properties")) {
+            if (is != null) {
+                java.util.Properties props = new java.util.Properties();
+                props.load(is);
+                String ver = props.getProperty("version");
+                if (ver != null && !ver.isBlank() && !ver.startsWith("${")) {
+                    return ver;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        String pkgVer = Main.class.getPackage() != null ? Main.class.getPackage().getImplementationVersion() : null;
+        if (pkgVer != null && !pkgVer.isBlank()) {
+            return pkgVer;
+        }
+        return "1.0";
     }
 }

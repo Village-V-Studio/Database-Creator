@@ -11,7 +11,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
 import org.jline.reader.LineReader;
 
 public class LogManager {

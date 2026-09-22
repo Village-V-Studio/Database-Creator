@@ -2,7 +2,6 @@ package com.villagev.studio.dbc.console;
 
 import java.time.Instant;
 import java.util.Map;
-
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
@@ -10,7 +9,6 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
-
 import com.villagev.studio.dbc.config.AppConfig;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 import com.villagev.studio.dbc.core.BackupManager;
@@ -273,11 +271,6 @@ public class Manager {
     }
 
     private boolean isDbConfigChanged(DatabaseConfig oldDb, DatabaseConfig newDb) {
-        // NOTE: We only compare fields that dictate the MariaDB daemon's network/auth
-        // state.
-        // If these change, the engine MUST restart.
-        // Other fields (autoBackup, maxLocalBackups) are read dynamically by DBC and do
-        // not require DB downtime.
         if (oldDb.getPort() != newDb.getPort())
             return true;
         if (!java.util.Objects.equals(oldDb.getUsername(), newDb.getUsername()))

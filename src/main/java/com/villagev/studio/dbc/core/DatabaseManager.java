@@ -8,25 +8,30 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import ch.vorburger.mariadb4j.DB;
 import ch.vorburger.mariadb4j.DBConfigurationBuilder;
-
+import com.villagev.studio.dbc.config.AppConfig;
 import com.villagev.studio.dbc.config.DatabaseConfig;
 
 public class DatabaseManager {
     private final Map<String, DB> activeDatabases = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<String, DatabaseConfig> activeConfigs = new java.util.concurrent.ConcurrentHashMap<>();
     private final File databasesDir = new File("databases");
-    private final File binariesDir = new File("mariaDB_binaries");
+    private final File binariesDir;
     private final ScheduledExecutorService watchdogExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public DatabaseManager() {
         if (!databasesDir.exists()) {
             databasesDir.mkdirs();
         }
+        this.binariesDir = BinaryManager.resolveBinariesDir(new File("mariaDB_binaries"));
+        BinaryManager.ensureBinaries(this.binariesDir);
         cleanupZombies();
         startWatchdog();
+    }
+
+    public DatabaseManager(AppConfig appConfig) {
+        this();
     }
 
     private void cleanupZombies() {
@@ -90,6 +95,9 @@ public class DatabaseManager {
         try {
             System.out.println("Starting database: " + name + " on port " + config.getPort() + "...");
 
+            BinaryManager.ensureBinaries(binariesDir);
+            BinaryManager.ensureExecutablePermissions(binariesDir);
+
             DBConfigurationBuilder configBuilder = DBConfigurationBuilder.newBuilder();
             configBuilder.setPort(config.getPort());
 
@@ -101,6 +109,10 @@ public class DatabaseManager {
             configBuilder.setDataDir(dataDir);
             configBuilder.setBaseDir(binariesDir);
             configBuilder.setSecurityDisabled(false);
+
+            if (BinaryManager.isCustomBinariesMode()) {
+                configBuilder.setUnpackingFromClasspath(false);
+            }
 
             DB db = DB.newEmbeddedDB(configBuilder.build());
             db.start();
@@ -129,10 +141,26 @@ public class DatabaseManager {
                         "ALTER USER IF EXISTS '" + safeUser + "'@'localhost' IDENTIFIED BY '" + safePass + "'; " +
                         "FLUSH PRIVILEGES;";
                 try {
-                    String connectionPassword = (!isNewDb && config.getUsername().equals("root"))
+                    String connectionPassword = (config.getUsername().equals("root"))
                             ? new String(config.getPassword())
                             : null;
-                    db.run(sql, "root", connectionPassword, null);
+                    String initialAdmin = (!BinaryManager.isWindows())
+                            ? System.getProperty("user.name", "root")
+                            : "root";
+                    try {
+                        db.run(sql, initialAdmin, connectionPassword, null);
+                    } catch (Exception e) {
+                        String fallbackAdmin = "root".equals(initialAdmin) ? System.getProperty("user.name", "root") : "root";
+                        try {
+                            db.run(sql, fallbackAdmin, connectionPassword, null);
+                        } catch (Exception e2) {
+                            if (!config.getUsername().equals("root") && config.getPassword() != null && config.getPassword().length > 0) {
+                                db.run(sql, config.getUsername(), new String(config.getPassword()), null);
+                            } else {
+                                throw e2;
+                            }
+                        }
+                    }
                 } catch (Exception e) {
                     System.err.println(
                             "Warning: Failed to update user privileges. If you changed the password in config, you might need to update it manually in the database.");

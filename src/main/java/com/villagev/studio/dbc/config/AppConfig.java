@@ -1,8 +1,8 @@
 package com.villagev.studio.dbc.config;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AppConfig {
     @JsonProperty("time-zone")
@@ -25,6 +25,7 @@ public class AppConfig {
 
     @JsonProperty("server")
     private ServerConfig server = new ServerConfig();
+
 
     @JsonProperty("database")
     private Map<String, DatabaseConfig> databases = new HashMap<>();
@@ -84,6 +85,7 @@ public class AppConfig {
     public void setServer(ServerConfig server) {
         this.server = server;
     }
+
 
     public Map<String, DatabaseConfig> getDatabases() {
         return databases;
